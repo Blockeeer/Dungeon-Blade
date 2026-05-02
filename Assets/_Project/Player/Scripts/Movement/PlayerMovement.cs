@@ -6,9 +6,8 @@ namespace DungeonBlade.Player
     [RequireComponent(typeof(CharacterController))]
     public class PlayerMovement : MonoBehaviour
     {
-        [Header("Walk / Run")]
+        [Header("Walk")]
         [SerializeField] float walkSpeed = 6f;
-        [SerializeField] float sprintSpeed = 9f;
         [SerializeField] float airAcceleration = 30f;
         [SerializeField] float groundAcceleration = 60f;
         [SerializeField] float groundFriction = 12f;
@@ -27,11 +26,19 @@ namespace DungeonBlade.Player
         [SerializeField] float bhopGain = 1.05f;
         [SerializeField] float bhopMaxSpeed = 14f;
 
-        [Header("Dash")]
+        [Header("Dash (Shift + WASD)")]
         [SerializeField] float dashSpeed = 18f;
         [SerializeField] float dashDuration = 0.18f;
         [SerializeField] float dashCooldown = 0.6f;
         [SerializeField] float dashStaminaCost = 20f;
+
+        [Header("Dodge (Double-tap WASD)")]
+        [SerializeField] float dodgeSpeed = 16f;
+        [SerializeField] float dodgeDuration = 0.15f;
+        [SerializeField] float dodgeCooldown = 0.4f;
+        [SerializeField] float dodgeStaminaCost = 15f;
+        [Tooltip("Maximum time between two presses of the same direction key to count as a double-tap.")]
+        [SerializeField] float doubleTapWindow = 0.25f;
 
         [Header("Slide")]
         [SerializeField] float slideSpeed = 12f;
@@ -73,7 +80,17 @@ namespace DungeonBlade.Player
         bool _isDashing;
         float _dashEndTime;
         float _nextDashTime;
+        float _nextDodgeTime;
         Vector3 _dashDirection;
+        float _activeBurstSpeed;
+
+        Vector2 _lastMoveInput;
+        float _lastForwardTapTime = -999f;
+        float _lastBackTapTime = -999f;
+        float _lastLeftTapTime = -999f;
+        float _lastRightTapTime = -999f;
+        bool _hasPendingDodge;
+        Vector3 _pendingDodgeDirection;
 
         public bool IsDashing => _isDashing;
         public bool IsInvulnerable => _isDashing;
@@ -238,17 +255,78 @@ namespace DungeonBlade.Player
                 return;
             }
 
-            if (Time.time < _nextDashTime) return;
-            if (!_input.Dash.WasPressedThisFrame()) return;
-            if (_stats != null && !_stats.TryConsumeStamina(dashStaminaCost)) return;
+            DetectDoubleTaps();
+
+            if (TryStartDash()) return;
+            TryStartDodge();
+        }
+
+        void DetectDoubleTaps()
+        {
+            bool forwardNow = _moveInput.y > 0.5f;
+            bool forwardPrev = _lastMoveInput.y > 0.5f;
+            bool backNow = _moveInput.y < -0.5f;
+            bool backPrev = _lastMoveInput.y < -0.5f;
+            bool rightNow = _moveInput.x > 0.5f;
+            bool rightPrev = _lastMoveInput.x > 0.5f;
+            bool leftNow = _moveInput.x < -0.5f;
+            bool leftPrev = _lastMoveInput.x < -0.5f;
+
+            if (forwardNow && !forwardPrev) HandleDirectionTap(ref _lastForwardTapTime, transform.forward);
+            else if (backNow && !backPrev) HandleDirectionTap(ref _lastBackTapTime, -transform.forward);
+            else if (rightNow && !rightPrev) HandleDirectionTap(ref _lastRightTapTime, transform.right);
+            else if (leftNow && !leftPrev) HandleDirectionTap(ref _lastLeftTapTime, -transform.right);
+
+            _lastMoveInput = _moveInput;
+        }
+
+        void HandleDirectionTap(ref float lastTapTime, Vector3 direction)
+        {
+            float now = Time.time;
+            if (now - lastTapTime <= doubleTapWindow)
+            {
+                _pendingDodgeDirection = direction.normalized;
+                _hasPendingDodge = true;
+                lastTapTime = -999f;
+            }
+            else
+            {
+                lastTapTime = now;
+            }
+        }
+
+        bool TryStartDash()
+        {
+            if (Time.time < _nextDashTime) return false;
+            if (!_input.Dash.WasPressedThisFrame()) return false;
+            if (_stats != null && !_stats.TryConsumeStamina(dashStaminaCost)) return false;
 
             Vector3 inputDir = transform.right * _moveInput.x + transform.forward * _moveInput.y;
             if (inputDir.sqrMagnitude < 0.01f) inputDir = transform.forward;
             _dashDirection = inputDir.normalized;
 
             _isDashing = true;
+            _activeBurstSpeed = dashSpeed;
             _dashEndTime = Time.time + dashDuration;
             _nextDashTime = Time.time + dashCooldown;
+            _hasPendingDodge = false;
+            return true;
+        }
+
+        bool TryStartDodge()
+        {
+            if (!_hasPendingDodge) return false;
+            _hasPendingDodge = false;
+
+            if (Time.time < _nextDodgeTime) return false;
+            if (_stats != null && !_stats.TryConsumeStamina(dodgeStaminaCost)) return false;
+
+            _dashDirection = _pendingDodgeDirection;
+            _isDashing = true;
+            _activeBurstSpeed = dodgeSpeed;
+            _dashEndTime = Time.time + dodgeDuration;
+            _nextDodgeTime = Time.time + dodgeCooldown;
+            return true;
         }
 
         void HandleSlide()
@@ -334,7 +412,7 @@ namespace DungeonBlade.Player
         {
             if (_isDashing)
             {
-                Vector3 dashStep = _dashDirection * dashSpeed;
+                Vector3 dashStep = _dashDirection * _activeBurstSpeed;
                 _controller.Move(dashStep * Time.deltaTime);
                 _velocity.x = dashStep.x;
                 _velocity.z = dashStep.z;
@@ -366,7 +444,7 @@ namespace DungeonBlade.Player
             }
 
             Vector3 wishDir = transform.right * _moveInput.x + transform.forward * _moveInput.y;
-            float wishSpeed = _input.Sprint.IsPressed() ? sprintSpeed : walkSpeed;
+            float wishSpeed = walkSpeed;
 
             Vector3 horizontalVel = new Vector3(_velocity.x, 0f, _velocity.z);
 
