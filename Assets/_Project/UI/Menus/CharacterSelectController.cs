@@ -16,6 +16,7 @@ namespace DungeonBlade.UI.Menus
             public string lore;
             public int str, agi, fin, arc;
             public Sprite portrait;
+            public Sprite headSprite;
         }
 
         public static readonly Character[] Roster =
@@ -100,7 +101,21 @@ namespace DungeonBlade.UI.Menus
             foreach (var c in Roster)
             {
                 if (c.portrait != null) continue;
-                c.portrait = Resources.Load<Sprite>("Characters/" + c.id);
+                var full = Resources.Load<Sprite>("Characters/" + c.id);
+                if (full == null) continue;
+                c.portrait = full;
+
+                if (full.texture != null)
+                {
+                    var tex = full.texture;
+                    const float headFracY = 0.30f;
+                    const float xMargin = 0.18f;
+                    float w = tex.width * (1f - 2f * xMargin);
+                    float h = tex.height * headFracY;
+                    float x = tex.width * xMargin;
+                    float y = tex.height - h;
+                    c.headSprite = Sprite.Create(tex, new Rect(x, y, w, h), new Vector2(0.5f, 0.5f), 100f);
+                }
             }
         }
 
@@ -194,17 +209,17 @@ namespace DungeonBlade.UI.Menus
             _cardSelOutline = new Image[n];
 
             float colX = -650f;
-            float topY = 240f;
+            float topY = 230f;
             const float cardW = 380f;
-            const float cardH = 86f;
-            const float gap = 14f;
+            const float cardH = 96f;
+            const float gap = 10f;
 
             for (int i = 0; i < n; i++)
             {
                 var c = Roster[i];
 
                 var cardGO = new GameObject("Card_" + c.id,
-                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Button));
                 int uiLayer = LayerMask.NameToLayer("UI");
                 if (uiLayer >= 0) cardGO.layer = uiLayer;
                 cardGO.transform.SetParent(parent, false);
@@ -216,27 +231,48 @@ namespace DungeonBlade.UI.Menus
                 cardRT.anchoredPosition = new Vector2(colX, topY - i * (cardH + gap));
                 cardRT.sizeDelta = new Vector2(cardW, cardH);
 
-                var bg = cardGO.GetComponent<Image>();
-                bg.sprite = MenuFx.SlabSprite();
-                bg.type = Image.Type.Simple;
-                bg.color = MultColor(c.accent, 0.55f, 0.85f);
+                // BG: child of card. Holds the Mask so gradient/text get clipped to rounded shape.
+                var bgGO = new GameObject("CardBG",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                if (uiLayer >= 0) bgGO.layer = uiLayer;
+                bgGO.transform.SetParent(cardRT, false);
+                var bgRT = (RectTransform)bgGO.transform;
+                MenuFx.StretchFull(bgRT);
+
+                var bg = bgGO.GetComponent<Image>();
+                bg.sprite = MenuFx.RoundedSlabSprite();
+                bg.type = Image.Type.Sliced;
+                bg.pixelsPerUnitMultiplier = 1f;
+                bg.color = MultColor(c.accent, 0.30f, 0.95f);
                 bg.raycastTarget = true;
                 _cardBgs[i] = bg;
+
+                bgGO.AddComponent<Mask>().showMaskGraphic = true;
+
+                var gradient = MenuFx.CreateImage(bgRT, "Gradient", bgRT.childCount);
+                gradient.rectTransform.anchorMin = Vector2.zero;
+                gradient.rectTransform.anchorMax = Vector2.one;
+                gradient.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                gradient.rectTransform.offsetMin = Vector2.zero;
+                gradient.rectTransform.offsetMax = Vector2.zero;
+                gradient.sprite = MenuFx.HorizontalGradientSprite();
+                gradient.color = MultColor(c.accent, 1.20f, 1.0f);
+                gradient.raycastTarget = false;
 
                 var btn = cardGO.GetComponent<Button>();
                 btn.targetGraphic = bg;
                 var colors = btn.colors;
-                colors.normalColor = MultColor(c.accent, 0.55f, 0.85f);
-                colors.highlightedColor = MultColor(c.accent, 0.80f, 1.00f);
-                colors.pressedColor = MultColor(c.accent, 0.40f, 0.95f);
-                colors.selectedColor = MultColor(c.accent, 0.80f, 1.00f);
-                colors.disabledColor = MultColor(c.accent, 0.30f, 0.60f);
+                colors.normalColor = MultColor(c.accent, 0.30f, 0.95f);
+                colors.highlightedColor = MultColor(c.accent, 0.55f, 1.00f);
+                colors.pressedColor = MultColor(c.accent, 0.20f, 1.00f);
+                colors.selectedColor = MultColor(c.accent, 0.55f, 1.00f);
+                colors.disabledColor = MultColor(c.accent, 0.18f, 0.65f);
                 colors.fadeDuration = 0.10f;
                 btn.colors = colors;
                 int captured = i;
                 btn.onClick.AddListener(() => SelectIndex(captured));
 
-                var stripe = MenuFx.CreateImage(cardRT, "Stripe", cardRT.childCount);
+                var stripe = MenuFx.CreateImage(bgRT, "Stripe", bgRT.childCount);
                 stripe.rectTransform.anchorMin = new Vector2(0f, 0f);
                 stripe.rectTransform.anchorMax = new Vector2(0f, 1f);
                 stripe.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -245,44 +281,70 @@ namespace DungeonBlade.UI.Menus
                 stripe.color = c.accent;
                 stripe.raycastTarget = false;
 
-                MenuFx.AddText(cardRT, "Name", _font,
+                MenuFx.AddText(bgRT, "Name", _font,
                     new Vector2(0f, 18f), new Vector2(cardW - 120f, 32f),
                     c.name, fontSize: 22,
                     color: MenuFx.SteelTint, spacing: 10f, style: FontStyles.Bold)
                     .alignment = TextAlignmentOptions.Left;
 
-                MenuFx.AddText(cardRT, "Role", _font,
+                MenuFx.AddText(bgRT, "Role", _font,
                     new Vector2(0f, -16f), new Vector2(cardW - 120f, 22f),
                     c.role, fontSize: 13,
                     color: new Color(MenuFx.SteelTint.r, MenuFx.SteelTint.g, MenuFx.SteelTint.b, 0.78f),
                     spacing: 14f, style: FontStyles.Bold)
                     .alignment = TextAlignmentOptions.Left;
 
-                FixLabelInsets(cardRT, "Name", left: 24f, right: 80f);
-                FixLabelInsets(cardRT, "Role", left: 24f, right: 80f);
+                FixLabelInsets(bgRT, "Name", left: 24f, right: 150f);
+                FixLabelInsets(bgRT, "Role", left: 24f, right: 150f);
 
-                var badge = MenuFx.CreateImage(cardRT, "Badge", cardRT.childCount);
-                badge.rectTransform.anchorMin = new Vector2(1f, 0.5f);
-                badge.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-                badge.rectTransform.pivot = new Vector2(1f, 0.5f);
-                badge.rectTransform.anchoredPosition = new Vector2(-14f, 0f);
-                badge.rectTransform.sizeDelta = new Vector2(56f, 56f);
-                badge.color = MultColor(c.accent, 1.0f, 1.0f);
-                badge.raycastTarget = false;
-
-                var initial = MenuFx.AddText(badge.rectTransform, "Initial", _font,
-                    Vector2.zero, new Vector2(56f, 56f),
-                    c.name.Substring(0, 1),
-                    fontSize: 32,
-                    color: new Color(0.05f, 0.06f, 0.08f, 1f),
-                    spacing: 0f, style: FontStyles.Bold);
-                initial.alignment = TextAlignmentOptions.Center;
-
-                var outline = MenuFx.CreateImage(cardRT, "SelOutline", cardRT.childCount);
+                var outline = MenuFx.CreateImage(bgRT, "SelOutline", 1);
                 MenuFx.StretchFull(outline.rectTransform);
-                outline.color = new Color(MenuFx.AccentRed.r, MenuFx.AccentRed.g, MenuFx.AccentRed.b, 0f);
+                outline.color = new Color(1f, 1f, 1f, 0f);
                 outline.raycastTarget = false;
                 _cardSelOutline[i] = outline;
+
+                // Portrait: child of cardRT (NOT bgRT) so head can poke above the rounded card.
+                BuildCardAvatar(cardRT, c, cardW, cardH);
+
+                // Border: rounded outline on top of everything, also outside the mask.
+                var border = MenuFx.CreateImage(cardRT, "Border", cardRT.childCount);
+                MenuFx.StretchFull(border.rectTransform);
+                border.sprite = MenuFx.RoundedBorderSprite();
+                border.type = Image.Type.Sliced;
+                border.pixelsPerUnitMultiplier = 1f;
+                border.color = new Color(1f, 1f, 1f, 0.20f);
+                border.raycastTarget = false;
+            }
+        }
+
+        void BuildCardAvatar(RectTransform cardRT, Character c, float cardW, float cardH)
+        {
+            if (c.headSprite != null)
+            {
+                var portrait = MenuFx.CreateImage(cardRT, "Portrait", cardRT.childCount);
+                portrait.rectTransform.anchorMin = new Vector2(1f, 0.5f);
+                portrait.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                portrait.rectTransform.pivot = new Vector2(1f, 0.5f);
+                portrait.rectTransform.anchoredPosition = new Vector2(-4f, 8f);
+                portrait.rectTransform.sizeDelta = new Vector2(214f, 100f);
+                portrait.preserveAspect = true;
+                portrait.sprite = c.headSprite;
+                portrait.color = Color.white;
+                portrait.raycastTarget = false;
+            }
+            else
+            {
+                var initial = MenuFx.AddText(cardRT, "Initial", _font,
+                    new Vector2(-cardW * 0.5f + 70f, 0f), new Vector2(80f, cardH),
+                    c.name.Substring(0, 1),
+                    fontSize: 56,
+                    color: new Color(0.05f, 0.06f, 0.08f, 0.95f),
+                    spacing: 0f, style: FontStyles.Bold);
+                initial.alignment = TextAlignmentOptions.Center;
+                initial.rectTransform.anchorMin = new Vector2(1f, 0.5f);
+                initial.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                initial.rectTransform.pivot = new Vector2(1f, 0.5f);
+                initial.rectTransform.anchoredPosition = new Vector2(-30f, 0f);
             }
         }
 
@@ -343,7 +405,6 @@ namespace DungeonBlade.UI.Menus
             string[] labels = { "STR", "AGI", "FIN", "ARC" };
             float startY = -260f;
             float rowH = 26f;
-            float barX = 80f;
             float barW = 360f;
 
             for (int i = 0; i < 4; i++)
@@ -509,9 +570,10 @@ namespace DungeonBlade.UI.Menus
             for (int k = 0; k < _cardSelOutline.Length; k++)
             {
                 bool sel = k == i;
-                _cardSelOutline[k].color = new Color(MenuFx.AccentRed.r, MenuFx.AccentRed.g, MenuFx.AccentRed.b, sel ? 0.55f : 0f);
-                var rt = _cardBgs[k].rectTransform;
-                rt.localScale = sel ? new Vector3(1.03f, 1.03f, 1f) : Vector3.one;
+                _cardSelOutline[k].color = new Color(1f, 1f, 1f, sel ? 0.18f : 0f);
+                var cardRT = _cardBgs[k].rectTransform.parent as RectTransform;
+                if (cardRT != null)
+                    cardRT.localScale = sel ? new Vector3(1.03f, 1.03f, 1f) : Vector3.one;
             }
 
             _previewBadge.color = c.accent;

@@ -21,6 +21,9 @@ namespace DungeonBlade.UI.Menus
         static Sprite _vignetteSprite;
         static Sprite _redGlowSprite;
         static Sprite _slabSprite;
+        static Sprite _hGradientSprite;
+        static Sprite _roundedSlabSprite;
+        static Sprite _roundedBorderSprite;
 
         public static Sprite GradientSprite()
         {
@@ -46,6 +49,21 @@ namespace DungeonBlade.UI.Menus
         {
             if (_slabSprite == null) _slabSprite = MakeSliced(BuildSlabTexture(), 6f);
             return _slabSprite;
+        }
+        public static Sprite HorizontalGradientSprite()
+        {
+            if (_hGradientSprite == null) _hGradientSprite = Make(BuildHorizontalGradient());
+            return _hGradientSprite;
+        }
+        public static Sprite RoundedSlabSprite()
+        {
+            if (_roundedSlabSprite == null) _roundedSlabSprite = MakeSliced(BuildRoundedSlab(64, 14, 0), 18f);
+            return _roundedSlabSprite;
+        }
+        public static Sprite RoundedBorderSprite()
+        {
+            if (_roundedBorderSprite == null) _roundedBorderSprite = MakeSliced(BuildRoundedSlab(64, 14, 2), 18f);
+            return _roundedBorderSprite;
         }
 
         public static void BuildBackdrop(Canvas canvas, Transform existingBgToReplace = null)
@@ -377,6 +395,71 @@ namespace DungeonBlade.UI.Menus
                 float d = Vector2.Distance(new Vector2(x, y), c) / maxD;
                 float a = Mathf.Pow(Mathf.Clamp01(1f - d), 2.5f);
                 tex.SetPixel(x, y, new Color(tint.r, tint.g, tint.b, a));
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        static Texture2D BuildRoundedSlab(int size, int radius, float strokeWidth)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+
+            float aaWidth = 1.0f;
+            float r = radius;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Min(x, size - 1 - x);
+                float dy = Mathf.Min(y, size - 1 - y);
+
+                float alpha;
+                if (dx >= r || dy >= r)
+                {
+                    alpha = 1f;
+                }
+                else
+                {
+                    float dist = Mathf.Sqrt((r - dx) * (r - dx) + (r - dy) * (r - dy));
+                    if (dist > r) alpha = 0f;
+                    else if (dist > r - aaWidth) alpha = (r - dist) / aaWidth;
+                    else alpha = 1f;
+                }
+
+                if (strokeWidth > 0f)
+                {
+                    float distFromEdge;
+                    if (dx >= r || dy >= r)
+                    {
+                        distFromEdge = Mathf.Min(dx, dy);
+                    }
+                    else
+                    {
+                        float dist = Mathf.Sqrt((r - dx) * (r - dx) + (r - dy) * (r - dy));
+                        distFromEdge = r - dist;
+                    }
+
+                    if (distFromEdge > strokeWidth + aaWidth) alpha = 0f;
+                    else if (distFromEdge > strokeWidth) alpha *= 1f - (distFromEdge - strokeWidth) / aaWidth;
+                }
+
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        static Texture2D BuildHorizontalGradient()
+        {
+            const int w = 256;
+            const int h = 4;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int x = 0; x < w; x++)
+            {
+                float t = x / (float)(w - 1);
+                float a = Mathf.SmoothStep(0f, 1f, t);
+                Color c = new Color(1f, 1f, 1f, a);
+                for (int y = 0; y < h; y++) tex.SetPixel(x, y, c);
             }
             tex.Apply();
             return tex;
