@@ -53,6 +53,8 @@ namespace DungeonBlade.UI.Menus
 
             if (_charSelect == null) _charSelect = new CharacterSelectController();
 
+            SetMenuChromeVisible(false);
+
             var font = titleLabel != null ? titleLabel.font : null;
             _charSelect.Open(canvas, font,
                 onConfirm: id =>
@@ -61,7 +63,28 @@ namespace DungeonBlade.UI.Menus
                     SaveChosenCharacter(id);
                     LoadScene(SceneLoader.Lobby);
                 },
-                onCancel: () => { });
+                onCancel: () =>
+                {
+                    SetMenuChromeVisible(true);
+                });
+        }
+
+        void SetMenuChromeVisible(bool visible)
+        {
+            var menuPanel = ResolveMenuPanel();
+            if (menuPanel != null) menuPanel.SetActive(visible);
+            if (versionLabel != null) versionLabel.gameObject.SetActive(visible);
+        }
+
+        GameObject ResolveMenuPanel()
+        {
+            if (titleLabel != null && titleLabel.transform.parent != null)
+                return titleLabel.transform.parent.gameObject;
+            if (newGameButton != null
+                && newGameButton.transform.parent != null
+                && newGameButton.transform.parent.parent != null)
+                return newGameButton.transform.parent.parent.gameObject;
+            return null;
         }
 
         static void SaveChosenCharacter(string characterId)

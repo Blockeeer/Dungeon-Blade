@@ -187,7 +187,7 @@ namespace DungeonBlade.UI.Menus
 
             MenuFx.AddText(parent, "Header", _font,
                 new Vector2(0f, 400f), new Vector2(1400f, 80f),
-                "CHOOSE  YOUR  CLASS",
+                "SELECT  HERO",
                 fontSize: 56,
                 color: MenuFx.SteelTint,
                 spacing: 22f, style: FontStyles.Bold);
