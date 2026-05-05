@@ -16,6 +16,11 @@ namespace DungeonBlade.UI.Menus
         [SerializeField] TMP_Text versionLabel;
         [SerializeField] TMP_Text titleLabel;
 
+        [Header("Hero 3D Preview")]
+        [SerializeField] CharacterSelectController.HeroModelEntry[] heroModels;
+        [SerializeField] AnimationClip heroIdleClip;
+        [SerializeField] Avatar heroAvatar;
+
         CharacterSelectController _charSelect;
 
         void Start()
@@ -57,6 +62,7 @@ namespace DungeonBlade.UI.Menus
 
             var font = titleLabel != null ? titleLabel.font : null;
             _charSelect.Open(canvas, font,
+                heroModels, heroIdleClip, heroAvatar,
                 onConfirm: id =>
                 {
                     DeleteSave();

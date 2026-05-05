@@ -217,7 +217,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 432927601}
-  - {fileID: 361865478}
+  - {fileID: 5351305602687033426}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -483,18 +483,6 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
---- !u!1 &361865477 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1515685107111787064, guid: f7074fdac8532b944aa133598cd61e4b,
-    type: 3}
-  m_PrefabInstance: {fileID: 5351305602687033425}
-  m_PrefabAsset: {fileID: 0}
---- !u!224 &361865478 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 5146324821507682044, guid: f7074fdac8532b944aa133598cd61e4b,
-    type: 3}
-  m_PrefabInstance: {fileID: 5351305602687033425}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &362084907
 GameObject:
   m_ObjectHideFlags: 0
@@ -829,8 +817,37 @@ MonoBehaviour:
   continueButton: {fileID: 1874601315}
   settingsButton: {fileID: 1532940135}
   quitButton: {fileID: 1206917296}
-  settingsPanel: {fileID: 361865477}
+  settingsPanel: {fileID: 0}
   versionLabel: {fileID: 903233466}
+  titleLabel: {fileID: 0}
+  heroModels:
+  - id: lyra
+    prefab: {fileID: 919132149155446097, guid: 643886bd88e26fa4a9e20b16d7487f96, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+      type: 3}
+  - id: mira
+    prefab: {fileID: 919132149155446097, guid: 548096f7c25d19b45b4f5c3396401170, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+      type: 3}
+  - id: aurelia
+    prefab: {fileID: 919132149155446097, guid: f95f82db684db82458aaed4a7b7106f7, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+      type: 3}
+  - id: kaelen
+    prefab: {fileID: 919132149155446097, guid: 3353a4eb58a6ed74a99e141bafc10ccc, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+      type: 3}
+  - id: wayne
+    prefab: {fileID: 919132149155446097, guid: 42fadf533f0db2c41981da1b5a78ece3, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+      type: 3}
+  - id: varion
+    prefab: {fileID: 919132149155446097, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+      type: 3}
+  heroIdleClip: {fileID: -203655887218126122, guid: 6322c0e1c6780774db49439065d69b0a,
+    type: 3}
+  heroAvatar: {fileID: 9000000, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
 --- !u!1 &477842283
 GameObject:
   m_ObjectHideFlags: 0
@@ -2747,6 +2764,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f7074fdac8532b944aa133598cd61e4b, type: 3}
+--- !u!224 &5351305602687033426 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4315134179084564456, guid: f7074fdac8532b944aa133598cd61e4b,
+    type: 3}
+  m_PrefabInstance: {fileID: 5351305602687033425}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
