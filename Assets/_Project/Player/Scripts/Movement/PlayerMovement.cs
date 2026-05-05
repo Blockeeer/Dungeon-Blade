@@ -31,23 +31,21 @@ namespace DungeonBlade.Player
         [SerializeField] float bhopGain = 1.05f;
         [SerializeField] float bhopMaxSpeed = 14f;
 
-        [Header("Dash (Shift + WASD)")]
+        [Header("Sideways Dash (Double-tap A/D)")]
         [SerializeField] float dashSpeed = 18f;
         [SerializeField] float dashDuration = 0.18f;
         [SerializeField] float dashCooldown = 0.6f;
         [SerializeField] float dashStaminaCost = 20f;
+        [Tooltip("Maximum time between two presses of A or D to count as a double-tap dash.")]
+        [SerializeField] float doubleTapWindow = 0.25f;
 
-        [Header("Dodge (Double-tap WASD)")]
+        [Header("Roll / Dive (Shift + WASD)")]
         [SerializeField] float dodgeSpeed = 16f;
-        // Bumped from 0.15s → 0.35s. The forward roll animation runs ~0.4s
-        // after head trim — the old 0.15s burst stopped horizontal momentum
-        // halfway through, which read as the character "stopping then rolling".
-        // Sustaining the burst for the whole roll keeps motion continuous.
+        // Sustain horizontal momentum for the full roll animation (~0.35s)
+        // so the character keeps moving instead of stopping mid-roll.
         [SerializeField] float dodgeDuration = 0.35f;
         [SerializeField] float dodgeCooldown = 0.4f;
         [SerializeField] float dodgeStaminaCost = 15f;
-        [Tooltip("Maximum time between two presses of the same direction key to count as a double-tap.")]
-        [SerializeField] float doubleTapWindow = 0.25f;
 
         [Header("Slide")]
         [SerializeField] float slideSpeed = 12f;
@@ -102,12 +100,10 @@ namespace DungeonBlade.Player
         float _activeBurstSpeed;
 
         Vector2 _lastMoveInput;
-        float _lastForwardTapTime = -999f;
-        float _lastBackTapTime = -999f;
         float _lastLeftTapTime = -999f;
         float _lastRightTapTime = -999f;
-        bool _hasPendingDodge;
-        Vector3 _pendingDodgeDirection;
+        bool _hasPendingDash;
+        Vector3 _pendingDashDirection;
 
         public bool IsDashing => _isDashing;
         public bool IsInvulnerable => _isDashing;
@@ -343,29 +339,27 @@ namespace DungeonBlade.Player
                 return;
             }
 
-            DetectDoubleTaps();
+            DetectSideTaps();
 
-            if (TryStartDash()) return;
-            TryStartDodge();
+            // Roll (Shift + any direction) takes priority over a pending dash —
+            // if the player presses Shift on the same frame as the second tap,
+            // the deliberate Shift press wins.
+            if (TryStartRoll()) return;
+            TryStartDash();
         }
 
-        void DetectDoubleTaps()
+        void DetectSideTaps()
         {
-            bool forwardNow = _moveInput.y > 0.5f;
-            bool forwardPrev = _lastMoveInput.y > 0.5f;
-            bool backNow = _moveInput.y < -0.5f;
-            bool backPrev = _lastMoveInput.y < -0.5f;
+            // Only A and D register double-taps. W and S taps are ignored —
+            // forward/back movement is reserved for Shift+roll only.
             bool rightNow = _moveInput.x > 0.5f;
             bool rightPrev = _lastMoveInput.x > 0.5f;
             bool leftNow = _moveInput.x < -0.5f;
             bool leftPrev = _lastMoveInput.x < -0.5f;
 
-            Vector3 cameraFwd = GetCameraForward();
             Vector3 cameraRight = GetCameraRight();
 
-            if (forwardNow && !forwardPrev) HandleDirectionTap(ref _lastForwardTapTime, cameraFwd);
-            else if (backNow && !backPrev) HandleDirectionTap(ref _lastBackTapTime, -cameraFwd);
-            else if (rightNow && !rightPrev) HandleDirectionTap(ref _lastRightTapTime, cameraRight);
+            if (rightNow && !rightPrev) HandleDirectionTap(ref _lastRightTapTime, cameraRight);
             else if (leftNow && !leftPrev) HandleDirectionTap(ref _lastLeftTapTime, -cameraRight);
 
             _lastMoveInput = _moveInput;
@@ -376,8 +370,8 @@ namespace DungeonBlade.Player
             float now = Time.time;
             if (now - lastTapTime <= doubleTapWindow)
             {
-                _pendingDodgeDirection = direction.normalized;
-                _hasPendingDodge = true;
+                _pendingDashDirection = direction.normalized;
+                _hasPendingDash = true;
                 lastTapTime = -999f;
             }
             else
@@ -386,12 +380,14 @@ namespace DungeonBlade.Player
             }
         }
 
-        bool TryStartDash()
+        bool TryStartRoll()
         {
-            if (Time.time < _nextDashTime) return false;
+            if (Time.time < _nextDodgeTime) return false;
             if (!_input.Dash.WasPressedThisFrame()) return false;
-            if (_stats != null && !_stats.TryConsumeStamina(dashStaminaCost)) return false;
+            if (_stats != null && !_stats.TryConsumeStamina(dodgeStaminaCost)) return false;
 
+            // Roll always uses current movement input — supports W/A/S/D and
+            // diagonals. With no input held, defaults to forward (camera fwd).
             Vector3 cameraFwd = GetCameraForward();
             Vector3 cameraRight = GetCameraRight();
             Vector3 inputDir = cameraRight * _moveInput.x + cameraFwd * _moveInput.y;
@@ -399,28 +395,28 @@ namespace DungeonBlade.Player
             _dashDirection = inputDir.normalized;
 
             _isDashing = true;
-            _activeBurstSpeed = dashSpeed;
-            _dashEndTime = Time.time + dashDuration;
-            _nextDashTime = Time.time + dashCooldown;
-            _hasPendingDodge = false;
-            DashStarted?.Invoke();
-            return true;
-        }
-
-        bool TryStartDodge()
-        {
-            if (!_hasPendingDodge) return false;
-            _hasPendingDodge = false;
-
-            if (Time.time < _nextDodgeTime) return false;
-            if (_stats != null && !_stats.TryConsumeStamina(dodgeStaminaCost)) return false;
-
-            _dashDirection = _pendingDodgeDirection;
-            _isDashing = true;
             _activeBurstSpeed = dodgeSpeed;
             _dashEndTime = Time.time + dodgeDuration;
             _nextDodgeTime = Time.time + dodgeCooldown;
+            _hasPendingDash = false;
             DodgeStarted?.Invoke();
+            return true;
+        }
+
+        bool TryStartDash()
+        {
+            if (!_hasPendingDash) return false;
+            _hasPendingDash = false;
+
+            if (Time.time < _nextDashTime) return false;
+            if (_stats != null && !_stats.TryConsumeStamina(dashStaminaCost)) return false;
+
+            _dashDirection = _pendingDashDirection;
+            _isDashing = true;
+            _activeBurstSpeed = dashSpeed;
+            _dashEndTime = Time.time + dashDuration;
+            _nextDashTime = Time.time + dashCooldown;
+            DashStarted?.Invoke();
             return true;
         }
 
