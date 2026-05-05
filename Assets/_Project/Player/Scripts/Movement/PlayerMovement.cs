@@ -39,7 +39,11 @@ namespace DungeonBlade.Player
 
         [Header("Dodge (Double-tap WASD)")]
         [SerializeField] float dodgeSpeed = 16f;
-        [SerializeField] float dodgeDuration = 0.15f;
+        // Bumped from 0.15s → 0.35s. The forward roll animation runs ~0.4s
+        // after head trim — the old 0.15s burst stopped horizontal momentum
+        // halfway through, which read as the character "stopping then rolling".
+        // Sustaining the burst for the whole roll keeps motion continuous.
+        [SerializeField] float dodgeDuration = 0.35f;
         [SerializeField] float dodgeCooldown = 0.4f;
         [SerializeField] float dodgeStaminaCost = 15f;
         [Tooltip("Maximum time between two presses of the same direction key to count as a double-tap.")]
@@ -117,6 +121,7 @@ namespace DungeonBlade.Player
         public Vector3 LastBurstDirection => _dashDirection;
 
         public event Action Jumped;
+        public event Action HighJumpStarted;
         public event Action DashStarted;
         public event Action DodgeStarted;
 
@@ -312,10 +317,11 @@ namespace DungeonBlade.Player
                 _velocity.y = Mathf.Sqrt(-2f * gravity * (jumpHeight + highJumpBoostHeight));
                 _highJumpAvailable = false;
                 _lastJumpPressedTime = -999f;
-                // Re-fire Jumped so the Animator re-triggers the Jump state — the
-                // user expects the second tap to "do something" visually, even
-                // if physics-side it's the same continuous arc.
-                Jumped?.Invoke();
+                // Don't re-fire Jumped — we're already in the Jump animator
+                // state and the second trigger only ever caused leakage into
+                // a duplicate Land. HighJumpStarted is the dedicated signal
+                // the bridge uses to switch the upcoming Land into HardLand.
+                HighJumpStarted?.Invoke();
             }
             else if (canAirJump)
             {

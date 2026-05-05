@@ -955,6 +955,7 @@ GameObject:
   - component: {fileID: 986504848830917625}
   - component: {fileID: 6772752587430629569}
   - component: {fileID: 1330222379543947433}
+  - component: {fileID: 909823540727176486}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1042,7 +1043,7 @@ MonoBehaviour:
   maxHealth: 100
   healthRegenPerSecond: 2
   healthRegenDelay: 4
-  maxStamina: 100
+  maxStamina: 20
   staminaRegenPerSecond: 25
   staminaRegenDelay: 0.5
 --- !u!114 &2158753945675706799
@@ -1151,6 +1152,20 @@ MonoBehaviour:
   horizontalSmoothTime: 0.02
   captureOffsetOnStart: 1
   localOffset: {x: 0.4, y: 0.4, z: -3}
+--- !u!114 &909823540727176486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5417951250458997335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f04d5208d4353e74698e673a1d6016c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hips: {fileID: 5647437622893958282}
+  lockY: 0
 --- !u!1 &5759260883044328325
 GameObject:
   m_ObjectHideFlags: 0

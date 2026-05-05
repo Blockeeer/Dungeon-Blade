@@ -390,6 +390,11 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 7ce5b544fc8552b4cb725b9cfb28296f, type: 2}
+    - target: {fileID: 1330222379543947433, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
+        type: 3}
+      propertyPath: target
+      value: 
+      objectReference: {fileID: 1321093149}
     - target: {fileID: 5417951250458997335, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
         type: 3}
       propertyPath: m_Name
@@ -473,6 +478,26 @@ PrefabInstance:
     - target: {fileID: 8629860393486599358, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
         type: 3}
       propertyPath: m_FOVAxisMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8629860393486599358, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
+        type: 3}
+      propertyPath: m_BackGroundColor.a
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8629860393486599358, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
+        type: 3}
+      propertyPath: m_BackGroundColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8629860393486599358, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
+        type: 3}
+      propertyPath: m_BackGroundColor.g
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8629860393486599358, guid: 81ee67893f0c3ff4c89aa8e102f063a5,
+        type: 3}
+      propertyPath: m_BackGroundColor.r
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

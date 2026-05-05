@@ -148,6 +148,10 @@ namespace DungeonBlade.EditorTools
             controller.AddParameter(new AnimatorControllerParameter { name = "MoveZ",       type = AnimatorControllerParameterType.Float });
             controller.AddParameter(new AnimatorControllerParameter { name = "Grounded",    type = AnimatorControllerParameterType.Bool, defaultBool = true });
             controller.AddParameter(new AnimatorControllerParameter { name = "Jump",        type = AnimatorControllerParameterType.Trigger });
+            // BigJump bool — set true by the high-jump second-tap, false by
+            // every regular Jumped. Land transitions read this to pick
+            // Landing.fbx (small jump) vs Hard Landing.fbx (high jump).
+            controller.AddParameter(new AnimatorControllerParameter { name = "BigJump",     type = AnimatorControllerParameterType.Bool });
             controller.AddParameter(new AnimatorControllerParameter { name = "Roll",        type = AnimatorControllerParameterType.Trigger });
             controller.AddParameter(new AnimatorControllerParameter { name = "Dodge",       type = AnimatorControllerParameterType.Trigger });
             controller.AddParameter(new AnimatorControllerParameter { name = "Dash",        type = AnimatorControllerParameterType.Trigger });
@@ -200,55 +204,89 @@ namespace DungeonBlade.EditorTools
             if (strafeL  != null) locoTree.AddChild(strafeL,  new Vector2(-1f,  0f));
             if (strafeR  != null) locoTree.AddChild(strafeR,  new Vector2( 1f,  0f));
 
-            // Jump (split by Speed) → Land → Locomotion
+            // Jump (split by Speed) → Land → Locomotion. Mixamo's clips are
+            // authored as full mocap takes (~1s) but PlayerMovement's actual
+            // jump arc is only ~0.7s — at 1× we'd land while the leg-extension
+            // pose is still mid-play. Bumped to 1.35× so the airborne pose
+            // arrives in time, paired with menu 5 trimming the anticipation
+            // frames at the start so the launch reads on the same frame the
+            // physics jump fires.
             var jumpState = sm.AddState("Jump",        new Vector3(550, -150, 0));
             jumpState.motion  = LoadClip(AnimationsRoot + "/Jump/Jump.fbx");
+            // In-place jump: slightly slower than the running leap so the
+            // launch / airborne pose is held visibly during the ~0.76s arc.
+            // Running jump already feels right — keep its 1.35×.
+            jumpState.speed   = 1.2f;
             var fjumpState = sm.AddState("ForwardJump", new Vector3(550,  -50, 0));
             fjumpState.motion = LoadClip(AnimationsRoot + "/Jump/Forward Jump.fbx");
+            fjumpState.speed  = 1.35f;
 
-            // Land state plays on touchdown — gives jumps real weight instead of
-            // snapping back to idle/run. We use the milder "Landing" clip whose
-            // end-pose is closer to a standing rest, so the blend back to
-            // Locomotion doesn't pop the way "Hard Landing" did.
-            var landState = sm.AddState("Land", new Vector3(800, -100, 0));
-            landState.motion = LoadClip(AnimationsRoot + "/Jump/Landing.fbx");
-            landState.speed  = 2.2f;
+            // ONE land state — Hard Landing — used only for the double-tap
+            // high-jump boost. Single jumps go direct from Jump → Locomotion
+            // with a generous blend, so the only post-jump animation the
+            // player sees in the common case is the Jump clip itself
+            // melting back into the run/idle pose.
+            var hardLandState = sm.AddState("HardLand", new Vector3(800, -200, 0));
+            hardLandState.motion = LoadClip(AnimationsRoot + "/Jump/Hard Landing.fbx");
+            hardLandState.speed  = 1.6f;
 
-            AddTriggerTransition(locoState, jumpState,  "Jump", ("Speed", AnimatorConditionMode.Less,    1f));
-            AddTriggerTransition(locoState, fjumpState, "Jump", ("Speed", AnimatorConditionMode.Greater, 1f));
-            AddLandTransition(jumpState,  landState);
-            AddLandTransition(fjumpState, landState);
-            // Exit Land early so control returns to the player quickly. The
-            // 0.18s blend still eats the end-pose mismatch without dragging
-            // out the recovery the way the old 0.4 / 0.3 values did.
-            var landToLoco = landState.AddTransition(locoState);
-            landToLoco.hasExitTime = true;
-            landToLoco.exitTime    = 0.15f;
-            landToLoco.duration    = 0.18f;
+            // Snappy 0.03s blend on Jump — anything longer reads as the body
+            // "sliding" out of the run pose for an extra frame or two before
+            // the leap actually starts.
+            AddTriggerTransition(locoState, jumpState,  "Jump", ("Speed", AnimatorConditionMode.Less,    1f), duration: 0.03f);
+            AddTriggerTransition(locoState, fjumpState, "Jump", ("Speed", AnimatorConditionMode.Greater, 1f), duration: 0.03f);
 
-            // Burst movement states (Dash / Roll / Dodge). Mixamo authors these
-            // clips at cinematic pace (~1s); for combat realism we play them at
-            // 2.5× and exit at 40% so the body is back in Locomotion well within
-            // the gameplay-side dash/dodge window (~0.18s) and the player has
-            // full control again quickly.
+            // Each jump state has TWO touchdown transitions:
+            //   • BigJump=true  → HardLand (heavy impact, quick blend)
+            //   • BigJump=false → Locomotion direct (no extra anim, longer
+            //     blend to melt the airborne pose into Idle/Run)
+            // Order matters — the BigJump variant is added first so the
+            // animator evaluates the heavier-impact branch before the
+            // always-true direct-to-loco path.
+            AddLandTransition(jumpState,   hardLandState, bigJumpRequired: true,  duration: 0.08f);
+            AddLandTransition(jumpState,   locoState,     bigJumpRequired: false, duration: 0.25f);
+            AddLandTransition(fjumpState,  hardLandState, bigJumpRequired: true,  duration: 0.08f);
+            AddLandTransition(fjumpState,  locoState,     bigJumpRequired: false, duration: 0.25f);
+
+            // Hard Landing recovery hits a brief settle pose around 35% —
+            // exit there so the player doesn't watch the slow stand-up.
+            var hardLandToLoco = hardLandState.AddTransition(locoState);
+            hardLandToLoco.hasExitTime = true;
+            hardLandToLoco.exitTime    = 0.35f;
+            hardLandToLoco.duration    = 0.20f;
+
+            // Burst i-frame moves (Dash / Dodge). Mixamo authors these clips at
+            // cinematic pace (~1s); for combat realism we play them at 2.5× and
+            // exit at 40% so control returns within the gameplay-side dash/dodge
+            // window (~0.18s).
             const float burstSpeed    = 2.5f;
             const float burstExitTime = 0.4f;
 
             var dashState  = sm.AddState("Dash",  new Vector3(550, -10, 0));
             dashState.motion  = LoadClip(AnimationsRoot + "/Locomotion/Standing Dive Forward.fbx");
             dashState.speed   = burstSpeed;
-            var rollState  = sm.AddState("Roll",  new Vector3(550,  80, 0));
-            rollState.motion  = LoadClip(AnimationsRoot + "/Locomotion/Dive Roll.fbx");
-            rollState.speed   = burstSpeed;
             var dodgeState = sm.AddState("Dodge", new Vector3(550, 180, 0));
             dodgeState.motion = LoadClip(AnimationsRoot + "/Locomotion/Dodging Back.fbx");
             dodgeState.speed  = burstSpeed;
 
+            // Roll is a TRAVERSAL move, not an i-frame burst — the player wants
+            // to see the whole gymnastic forward roll. The shared 2.5×/40% burst
+            // tuning was cutting the roll motion before the body had even started
+            // tucking. 1.4× speed + 0.85 exit lets the full clip read while still
+            // returning control fast enough to chain into another action.
+            var rollState  = sm.AddState("Roll",  new Vector3(550,  80, 0));
+            rollState.motion  = LoadClip(AnimationsRoot + "/Locomotion/Dive Roll.fbx");
+            rollState.speed   = 1.4f;
+
             AddTriggerTransition(locoState, dashState,  "Dash");
-            AddTriggerTransition(locoState, rollState,  "Roll");
+            // Roll trigger blend bumped to 0.30 — the running locomotion pose
+            // and the roll's lunge-forward keyframe pose-mix over a long
+            // window so the running motion visibly carries into the roll
+            // instead of cutting through a momentary stand pose.
+            AddTriggerTransition(locoState, rollState,  "Roll", duration: 0.30f);
             AddTriggerTransition(locoState, dodgeState, "Dodge");
             AddExitTimeTransition(dashState,  locoState, burstExitTime);
-            AddExitTimeTransition(rollState,  locoState, burstExitTime);
+            AddExitTimeTransition(rollState,  locoState, 0.85f);
             AddExitTimeTransition(dodgeState, locoState, burstExitTime);
 
             // Attack (branched by WeaponType)
@@ -396,34 +434,45 @@ namespace DungeonBlade.EditorTools
         }
 
         static void AddTriggerTransition(AnimatorState from, AnimatorState to, string trigger,
-            (string param, AnimatorConditionMode mode, float threshold) extra = default)
+            (string param, AnimatorConditionMode mode, float threshold) extra = default,
+            float duration = 0.12f)
         {
+            // Default trigger blend bumped from 0.08 → 0.12 so attacks /
+            // reloads / parries feel less like a snap-cut. Snappy paths
+            // (Jump = 0.03) still pass an explicit shorter value.
             var t = from.AddTransition(to);
             t.AddCondition(AnimatorConditionMode.If, 0f, trigger);
             if (!string.IsNullOrEmpty(extra.param))
                 t.AddCondition(extra.mode, extra.threshold, extra.param);
             t.hasExitTime = false;
-            t.duration    = 0.08f;
+            t.duration    = duration;
         }
 
         static void AddExitTimeTransition(AnimatorState from, AnimatorState to, float exitTime)
         {
+            // Bumped from 0.15 → 0.20 so one-shots melt back into Locomotion
+            // instead of popping. The cost is ~50ms of pose-mixing on the
+            // tail, which is fine because all of these states already exit
+            // before their full clip plays.
             var t = from.AddTransition(to);
             t.hasExitTime = true;
             t.exitTime    = exitTime;
-            t.duration    = 0.15f;
+            t.duration    = 0.20f;
         }
 
-        static void AddLandTransition(AnimatorState from, AnimatorState to)
+        static void AddLandTransition(AnimatorState from, AnimatorState to, bool bigJumpRequired = false, float duration = 0.08f)
         {
             // No exit time — the moment Grounded flips back to true, we snap
-            // straight into the Land state. The previous 0.7 exit time forced
-            // the player to watch ~70% of the jump animation play out *after*
-            // their feet hit the ground, which read as a heavy landing delay.
+            // straight into the destination state.
+            // bigJumpRequired adds a BigJump==true|false gate so the same
+            // source state can route to either Locomotion (single jump,
+            // quiet recovery) or HardLand (heavy impact) based on which
+            // jump path fired.
             var t = from.AddTransition(to);
             t.AddCondition(AnimatorConditionMode.If, 0f, "Grounded");
+            t.AddCondition(bigJumpRequired ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, 0f, "BigJump");
             t.hasExitTime = false;
-            t.duration    = 0.08f;
+            t.duration    = duration;
         }
 
         static void AddAnyStateTrigger(AnimatorStateMachine sm, AnimatorState to, string trigger)
@@ -550,6 +599,13 @@ namespace DungeonBlade.EditorTools
             var movement = root.AddComponent<PlayerMovement>();
             root.AddComponent<PlayerCombat>();
             root.AddComponent<PlayerAnimatorBridge>();
+            // HipsLock pins the Mixamo Hips bone's local XZ to its baseline
+            // every LateUpdate so animation clips can never visibly translate
+            // the character — only CharacterController.Move moves the body.
+            // Without this, Mixamo's baked Hips translation in jump / roll /
+            // dodge clips drifts the body during the clip and snaps back at
+            // the blend, which reads as "character pulled backward".
+            root.AddComponent<HipsLock>();
 
             var animator = root.GetComponent<Animator>() ?? root.AddComponent<Animator>();
             animator.runtimeAnimatorController = animController;
@@ -649,6 +705,39 @@ namespace DungeonBlade.EditorTools
             "Landing", "Hit", "Big", "Dying", "Death",
         };
 
+        // Mixamo authors most jump and landing takes with several frames of
+        // dead-time at the head and tail (idle stand, then anticipation crouch,
+        // then the action; or the action followed by a relaxed stand). At
+        // gameplay pace those frames read as "Jump anim is delayed" or "Land
+        // anim drags". This table trims the head / tail of specific clips so
+        // the meaningful action is what actually plays. Numbers are fractions
+        // of total clip length, applied to firstFrame / lastFrame.
+        struct ClipTrim { public float head; public float tail; }
+        static readonly Dictionary<string, ClipTrim> ClipTrims = new Dictionary<string, ClipTrim>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Jump.fbx (in-place): keep a small slice of the knee-bend so the
+            // jump has visible anticipation — without it the launch pose
+            // appears suddenly and reads as robotic. 0.20 trim drops the
+            // standing dead-time at the start but keeps the wind-up readable.
+            // Forward Jump.fbx (running leap): less anticipation cut needed
+            // because the running momentum already sells the windup.
+            { "Jump",          new ClipTrim { head = 0.20f, tail = 0.05f } },
+            { "Forward Jump",  new ClipTrim { head = 0.20f, tail = 0.05f } },
+            // Landing.fbx: feet plant in the first half, the rest is rise-back.
+            // Aggressive tail trim used to drop more of the recovery, but it
+            // chopped the absorb-frame and made the Land animation look like
+            // it played twice (impact pose held → snapped to Idle pose). 25%
+            // tail trim keeps the absorb visible while still dropping the
+            // slow re-stand at the end.
+            { "Landing",       new ClipTrim { head = 0.05f, tail = 0.25f } },
+            { "Hard Landing",  new ClipTrim { head = 0.05f, tail = 0.25f } },
+            // Dive Roll: ~25% prep (standing → arms up → wind up) before the
+            // actual lunge. Cutting it more aggressively means the first
+            // post-trim frame is the body already mid-lunge, which mixes
+            // smoothly with a running pose during the trigger blend.
+            { "Dive Roll",     new ClipTrim { head = 0.25f, tail = 0.10f } },
+        };
+
         [MenuItem("Tools/Dungeon Blade/Player/5. Configure Animation Clip Settings")]
         public static void ConfigureAnimationClipSettings()
         {
@@ -672,13 +761,58 @@ namespace DungeonBlade.EditorTools
                 var clips = imp.defaultClipAnimations;
                 if (clips == null || clips.Length == 0) continue;
 
+                // If this file has a trim entry, look up the source clip's total
+                // frame count once so we can convert the head / tail fractions
+                // into firstFrame / lastFrame values. Loaded *before* we touch
+                // clipAnimations because LoadClip walks AssetDatabase.LoadAllAssetsAtPath
+                // which prefers the importer's *current* clip data.
+                bool hasTrim = ClipTrims.TryGetValue(fileName, out var trim);
+                float totalFrames = 0f;
+                if (hasTrim)
+                {
+                    var srcClip = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
+                        .FirstOrDefault(c => !c.name.StartsWith("__preview"));
+                    if (srcClip != null && srcClip.frameRate > 0f)
+                        totalFrames = srcClip.length * srcClip.frameRate;
+                    else
+                        hasTrim = false;
+                }
+
                 bool changed = false;
                 foreach (var clip in clips)
                 {
                     if (clip.loopTime != shouldLoop) { clip.loopTime = shouldLoop; changed = true; }
                     if (clip.loopPose != shouldLoop) { clip.loopPose = shouldLoop; changed = true; }
-                    if (clip.lockRootHeightY != shouldBakeMotion)    { clip.lockRootHeightY    = shouldBakeMotion; changed = true; }
-                    if (clip.lockRootPositionXZ != shouldBakeMotion) { clip.lockRootPositionXZ = shouldBakeMotion; changed = true; }
+
+                    // Y-bake: keep on for motion clips so the visible knee-bend
+                    // / leap-extension reads in the body pose. Off for loops
+                    // (locomotion) so the character doesn't bob with the clip.
+                    if (clip.lockRootHeightY != shouldBakeMotion) { clip.lockRootHeightY = shouldBakeMotion; changed = true; }
+
+                    // XZ-bake: deliberately OFF for motion clips. Mixamo bakes
+                    // forward translation INTO the body pose for jumps / rolls
+                    // / dodges. Combined with applyRootMotion=false (so the
+                    // GameObject doesn't move from the animation either), the
+                    // body ends the clip at +1m forward visually — and then the
+                    // blend back to Idle pulls the body backward to (0,0,0).
+                    // That backward-pull is exactly what reads as the character
+                    // drifting backward off the plane. Setting lockRootPositionXZ
+                    // = false forces the clip's XZ into root motion (which is
+                    // suppressed) instead of the body pose. CC.Move provides
+                    // all visible XZ motion.
+                    if (clip.lockRootPositionXZ != false) { clip.lockRootPositionXZ = false; changed = true; }
+
+                    // Same logic for rotation — keep the pelvis facing the
+                    // GameObject's forward, never the clip-baked lean.
+                    if (clip.lockRootRotation != false) { clip.lockRootRotation = false; changed = true; }
+
+                    if (hasTrim)
+                    {
+                        float desiredFirst = Mathf.Round(totalFrames * trim.head);
+                        float desiredLast  = Mathf.Round(totalFrames * (1f - trim.tail));
+                        if (Mathf.Abs(clip.firstFrame - desiredFirst) > 0.5f) { clip.firstFrame = desiredFirst; changed = true; }
+                        if (Mathf.Abs(clip.lastFrame  - desiredLast)  > 0.5f) { clip.lastFrame  = desiredLast;  changed = true; }
+                    }
                 }
 
                 if (!changed) continue;
@@ -689,7 +823,8 @@ namespace DungeonBlade.EditorTools
                 string category = shouldLoop ? "loop      "
                                 : shouldBakeMotion ? "bake-pose "
                                 : "one-shot  ";
-                Debug.Log($"[Dungeon Blade]   {category}→  {fileName}");
+                string trimNote = hasTrim ? $"  trim head={trim.head:0.##} tail={trim.tail:0.##}" : "";
+                Debug.Log($"[Dungeon Blade]   {category}→  {fileName}{trimNote}");
             }
 
             Debug.Log($"[Dungeon Blade] Configured clip settings on {updated} animation file(s).");
@@ -1002,6 +1137,58 @@ namespace DungeonBlade.EditorTools
                 if (t.name == name) return t;
             }
             return null;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 12. ATTACH HIPS LOCK TO EXISTING PREFAB
+        //    Bootstrap (menu 4) now adds HipsLock automatically. For prefabs
+        //    built before that change, this menu attaches the component
+        //    in-place and locates the Mixamo Hips bone for it.
+        // ─────────────────────────────────────────────────────────────────────
+        [MenuItem("Tools/Dungeon Blade/Player/12. Attach Hips Lock (Fix Backward Drift)")]
+        public static void AttachHipsLock()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"[Dungeon Blade] {PrefabPath} not found. Run menu 4 first.");
+                return;
+            }
+
+            var root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var lockComp = root.GetComponent<HipsLock>();
+                if (lockComp == null) lockComp = root.AddComponent<HipsLock>();
+
+                // Find the Mixamo Hips bone and pre-assign it so the script
+                // doesn't have to re-walk the hierarchy at runtime.
+                Transform hips = null;
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name.IndexOf("Hips", StringComparison.OrdinalIgnoreCase) >= 0) { hips = t; break; }
+                }
+                if (hips == null)
+                {
+                    Debug.LogError("[Dungeon Blade] No Hips bone found under Player prefab — HipsLock added but unwired.");
+                    return;
+                }
+
+                var so = new SerializedObject(lockComp);
+                var hipsProp = so.FindProperty("hips");
+                if (hipsProp != null)
+                {
+                    hipsProp.objectReferenceValue = hips;
+                    so.ApplyModifiedProperties();
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                Debug.Log($"[Dungeon Blade] HipsLock attached to Player prefab (hips = {hips.name}). The character will no longer drift from Mixamo's baked Hips translation.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────

@@ -30,6 +30,7 @@ namespace DungeonBlade.Player
         static readonly int HashMoveZ       = Animator.StringToHash("MoveZ");
         static readonly int HashGrounded    = Animator.StringToHash("Grounded");
         static readonly int HashJump        = Animator.StringToHash("Jump");
+        static readonly int HashBigJump     = Animator.StringToHash("BigJump");
         static readonly int HashRoll        = Animator.StringToHash("Roll");
         static readonly int HashDodge       = Animator.StringToHash("Dodge");
         static readonly int HashDash        = Animator.StringToHash("Dash");
@@ -52,6 +53,7 @@ namespace DungeonBlade.Player
         float _smoothedSpeed;
         float _smoothedMoveX;
         float _smoothedMoveZ;
+        bool _wasGrounded = true;
 
         void Awake()
         {
@@ -71,9 +73,10 @@ namespace DungeonBlade.Player
         {
             if (movement != null)
             {
-                movement.Jumped       += OnJumped;
-                movement.DashStarted  += OnDashStarted;
-                movement.DodgeStarted += OnDodgeStarted;
+                movement.Jumped           += OnJumped;
+                movement.HighJumpStarted  += OnHighJumpStarted;
+                movement.DashStarted      += OnDashStarted;
+                movement.DodgeStarted     += OnDodgeStarted;
             }
             if (combat != null)
             {
@@ -96,9 +99,10 @@ namespace DungeonBlade.Player
         {
             if (movement != null)
             {
-                movement.Jumped       -= OnJumped;
-                movement.DashStarted  -= OnDashStarted;
-                movement.DodgeStarted -= OnDodgeStarted;
+                movement.Jumped           -= OnJumped;
+                movement.HighJumpStarted  -= OnHighJumpStarted;
+                movement.DashStarted      -= OnDashStarted;
+                movement.DodgeStarted     -= OnDodgeStarted;
             }
             if (combat != null)
             {
@@ -125,8 +129,23 @@ namespace DungeonBlade.Player
                 _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, target, speedSmoothing * Time.deltaTime);
                 _animator.SetFloat(HashSpeed, _smoothedSpeed);
 
-                _animator.SetBool(HashGrounded, movement.IsGrounded);
+                bool nowGrounded = movement.IsGrounded;
+                _animator.SetBool(HashGrounded, nowGrounded);
                 _animator.SetBool(HashSlide,    movement.IsSliding);
+
+                // Rising edge of Grounded → just landed. Clear any Jump trigger
+                // that may still be pending from a high-jump boost (the second
+                // Space-tap fires Jumped a second time mid-air, but no
+                // transition consumes the trigger because we're already in
+                // the Jump state). Without this reset, the lingering trigger
+                // re-fires Locomotion → Jump immediately after Land exits,
+                // which then snaps right back to Land — visible as the
+                // landing animation playing twice.
+                if (nowGrounded && !_wasGrounded)
+                {
+                    _animator.ResetTrigger(HashJump);
+                }
+                _wasGrounded = nowGrounded;
 
                 // Project world velocity onto camera basis to get strafe / forward
                 // components for the 2D Locomotion blend tree. Normalize by
@@ -159,7 +178,15 @@ namespace DungeonBlade.Player
             _animator.SetBool(HashBlock, blocking);
         }
 
-        void OnJumped()       => _animator.SetTrigger(HashJump);
+        void OnJumped()
+        {
+            // Default every fresh jump to "small" — HighJumpStarted will flip
+            // BigJump back to true on the second-tap path. The Land transitions
+            // gate on BigJump to pick Landing vs Hard Landing.
+            _animator.SetBool(HashBigJump, false);
+            _animator.SetTrigger(HashJump);
+        }
+        void OnHighJumpStarted() => _animator.SetBool(HashBigJump, true);
         void OnDashStarted()  => _animator.SetTrigger(HashDash);
 
         void OnDodgeStarted()
