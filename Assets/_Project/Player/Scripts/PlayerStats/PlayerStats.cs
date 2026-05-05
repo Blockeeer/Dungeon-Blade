@@ -49,10 +49,15 @@ namespace DungeonBlade.Player
         public float MaxHealth => maxHealth;
         public float MaxStamina => maxStamina;
         public bool IsDead => Health <= 0f;
+        public bool IsLowStamina => Stamina <= maxStamina * 0.2f;
 
         public event Action<float, float> OnHealthChanged;
         public event Action<float, float> OnStaminaChanged;
         public event Action OnDeath;
+        // Fires when the player actually takes damage (after parry/dodge filters).
+        // The float is the damage amount that landed; bridge uses it to decide
+        // between a small Hit react and a Big Hit react.
+        public event Action<float> OnDamaged;
 
         float _lastDamageTime = -999f;
         float _lastStaminaUseTime = -999f;
@@ -84,6 +89,7 @@ namespace DungeonBlade.Player
 
             _lastDamageTime = Time.time;
             SetHealth(Mathf.Max(0f, Health - amount));
+            OnDamaged?.Invoke(amount);
 
             if (Health <= 0f)
             {

@@ -1,3 +1,4 @@
+using System;
 using DungeonBlade.Core;
 using UnityEngine;
 
@@ -18,6 +19,10 @@ namespace DungeonBlade.Player
         [SerializeField] float gravity = -22f;
         [SerializeField] float coyoteTime = 0.12f;
         [SerializeField] float jumpBufferTime = 0.12f;
+        [Tooltip("Pressing Jump again within this window of the ground jump replaces the second jump with a single high-jump arc.")]
+        [SerializeField] float highJumpTapWindow = 0.25f;
+        [Tooltip("Extra effective height the high-jump boost adds on top of jumpHeight.")]
+        [SerializeField] float highJumpBoostHeight = 1.8f;
 
         [Header("Bunny Hop")]
         [Tooltip("Window after landing in which jumping again preserves horizontal momentum.")]
@@ -60,6 +65,12 @@ namespace DungeonBlade.Player
         [SerializeField] float minPitch = -80f;
         [SerializeField] float maxPitch = 80f;
 
+        [Header("Character Facing")]
+        [Tooltip("If ON: body rotates to face movement direction (action-game style; needs forward-only run anim). If OFF: body stays facing camera direction (shooter style; needs strafe + backpedal anims). Default OFF since the 2D Locomotion BlendTree provides directional clips.")]
+        [SerializeField] bool faceMovementDirection = false;
+        [Tooltip("Degrees per second the character body rotates toward the movement direction. Only used when faceMovementDirection is ON.")]
+        [SerializeField] float characterTurnSpeed = 720f;
+
         CharacterController _controller;
         PlayerStats _stats;
         PlayerInputActions _input;
@@ -72,6 +83,8 @@ namespace DungeonBlade.Player
         bool _isGrounded;
         float _lastGroundedTime;
         float _lastJumpPressedTime = -999f;
+        float _lastJumpExecuteTime = -999f;
+        bool _highJumpAvailable;
         int _airJumpsUsed;
 
         float _lastLandTime = -999f;
@@ -94,6 +107,18 @@ namespace DungeonBlade.Player
 
         public bool IsDashing => _isDashing;
         public bool IsInvulnerable => _isDashing;
+        public bool IsGrounded => _isGrounded;
+        public bool IsSliding => _isSliding;
+        public Vector3 Velocity => _velocity;
+        public Vector2 MoveInput => _moveInput;
+        public float HorizontalSpeed => new Vector2(_velocity.x, _velocity.z).magnitude;
+        // World-space direction of the most recent dash or dodge — bridge reads
+        // this in OnDodgeStarted to pick between Roll (sideways) and Dodge-Back.
+        public Vector3 LastBurstDirection => _dashDirection;
+
+        public event Action Jumped;
+        public event Action DashStarted;
+        public event Action DodgeStarted;
 
         bool _isSliding;
         float _slideEndTime;
@@ -157,11 +182,44 @@ namespace DungeonBlade.Player
             _yaw += look.x;
             _pitch = Mathf.Clamp(_pitch - look.y, minPitch, maxPitch);
 
-            transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
-            if (cameraRig != null)
+            if (faceMovementDirection)
             {
-                cameraRig.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+                // Action-game mode: body turns toward movement (in ApplyMovement).
+                // Camera must compensate so its world rotation stays at (pitch, yaw)
+                // regardless of body spin.
+                if (cameraRig != null)
+                {
+                    Quaternion desiredCameraWorldRot = Quaternion.Euler(_pitch, _yaw, 0f);
+                    cameraRig.localRotation = Quaternion.Inverse(transform.rotation) * desiredCameraWorldRot;
+                }
             }
+            else
+            {
+                // Shooter mode: body always faces camera-yaw direction; cameraRig
+                // (a child) only handles pitch locally. Strafe / backpedal clips
+                // in the 2D Locomotion blend tree handle directional animation.
+                transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
+                if (cameraRig != null)
+                {
+                    cameraRig.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+                }
+            }
+        }
+
+        Vector3 GetCameraForward()
+        {
+            if (cameraRig == null) return transform.forward;
+            Vector3 fwd = cameraRig.forward;
+            fwd.y = 0f;
+            return fwd.sqrMagnitude > 0.0001f ? fwd.normalized : transform.forward;
+        }
+
+        Vector3 GetCameraRight()
+        {
+            if (cameraRig == null) return transform.right;
+            Vector3 right = cameraRig.right;
+            right.y = 0f;
+            return right.sqrMagnitude > 0.0001f ? right.normalized : transform.right;
         }
 
         void UpdateGrounding()
@@ -187,6 +245,7 @@ namespace DungeonBlade.Player
         void OnLand()
         {
             _airJumpsUsed = 0;
+            _highJumpAvailable = false;
 
             float horizontalSpeed = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
             _carriedHorizontalSpeed = horizontalSpeed;
@@ -208,6 +267,13 @@ namespace DungeonBlade.Player
             bool canAirJump = !_isGrounded && _airJumpsUsed < maxAirJumps;
             bool canWallJump = _isWallRunning;
 
+            // Second Space tap shortly after the ground jump → boost the SAME
+            // jump arc into a single high-jump instead of triggering a separate
+            // air-jump (which read as "two jumps" visually).
+            bool isHighJumpBoost = _highJumpAvailable
+                && !_isGrounded
+                && Time.time - _lastJumpExecuteTime <= highJumpTapWindow;
+
             if (canWallJump)
             {
                 Vector3 jumpDir = (_wallNormal + Vector3.up).normalized;
@@ -215,6 +281,7 @@ namespace DungeonBlade.Player
                 _velocity.y = Mathf.Sqrt(-2f * gravity * jumpHeight);
                 _isWallRunning = false;
                 _lastJumpPressedTime = -999f;
+                Jumped?.Invoke();
                 return;
             }
 
@@ -235,12 +302,27 @@ namespace DungeonBlade.Player
 
                 _isGrounded = false;
                 _lastJumpPressedTime = -999f;
+                _lastJumpExecuteTime = Time.time;
+                _highJumpAvailable = true;
+                Jumped?.Invoke();
+            }
+            else if (isHighJumpBoost)
+            {
+                // Replace the climbing velocity with a single bigger arc.
+                _velocity.y = Mathf.Sqrt(-2f * gravity * (jumpHeight + highJumpBoostHeight));
+                _highJumpAvailable = false;
+                _lastJumpPressedTime = -999f;
+                // Re-fire Jumped so the Animator re-triggers the Jump state — the
+                // user expects the second tap to "do something" visually, even
+                // if physics-side it's the same continuous arc.
+                Jumped?.Invoke();
             }
             else if (canAirJump)
             {
                 _velocity.y = Mathf.Sqrt(-2f * gravity * jumpHeight);
                 _airJumpsUsed++;
                 _lastJumpPressedTime = -999f;
+                Jumped?.Invoke();
             }
         }
 
@@ -272,10 +354,13 @@ namespace DungeonBlade.Player
             bool leftNow = _moveInput.x < -0.5f;
             bool leftPrev = _lastMoveInput.x < -0.5f;
 
-            if (forwardNow && !forwardPrev) HandleDirectionTap(ref _lastForwardTapTime, transform.forward);
-            else if (backNow && !backPrev) HandleDirectionTap(ref _lastBackTapTime, -transform.forward);
-            else if (rightNow && !rightPrev) HandleDirectionTap(ref _lastRightTapTime, transform.right);
-            else if (leftNow && !leftPrev) HandleDirectionTap(ref _lastLeftTapTime, -transform.right);
+            Vector3 cameraFwd = GetCameraForward();
+            Vector3 cameraRight = GetCameraRight();
+
+            if (forwardNow && !forwardPrev) HandleDirectionTap(ref _lastForwardTapTime, cameraFwd);
+            else if (backNow && !backPrev) HandleDirectionTap(ref _lastBackTapTime, -cameraFwd);
+            else if (rightNow && !rightPrev) HandleDirectionTap(ref _lastRightTapTime, cameraRight);
+            else if (leftNow && !leftPrev) HandleDirectionTap(ref _lastLeftTapTime, -cameraRight);
 
             _lastMoveInput = _moveInput;
         }
@@ -301,8 +386,10 @@ namespace DungeonBlade.Player
             if (!_input.Dash.WasPressedThisFrame()) return false;
             if (_stats != null && !_stats.TryConsumeStamina(dashStaminaCost)) return false;
 
-            Vector3 inputDir = transform.right * _moveInput.x + transform.forward * _moveInput.y;
-            if (inputDir.sqrMagnitude < 0.01f) inputDir = transform.forward;
+            Vector3 cameraFwd = GetCameraForward();
+            Vector3 cameraRight = GetCameraRight();
+            Vector3 inputDir = cameraRight * _moveInput.x + cameraFwd * _moveInput.y;
+            if (inputDir.sqrMagnitude < 0.01f) inputDir = cameraFwd;
             _dashDirection = inputDir.normalized;
 
             _isDashing = true;
@@ -310,6 +397,7 @@ namespace DungeonBlade.Player
             _dashEndTime = Time.time + dashDuration;
             _nextDashTime = Time.time + dashCooldown;
             _hasPendingDodge = false;
+            DashStarted?.Invoke();
             return true;
         }
 
@@ -326,6 +414,7 @@ namespace DungeonBlade.Player
             _activeBurstSpeed = dodgeSpeed;
             _dashEndTime = Time.time + dodgeDuration;
             _nextDodgeTime = Time.time + dodgeCooldown;
+            DodgeStarted?.Invoke();
             return true;
         }
 
@@ -443,7 +532,9 @@ namespace DungeonBlade.Player
                 return;
             }
 
-            Vector3 wishDir = transform.right * _moveInput.x + transform.forward * _moveInput.y;
+            Vector3 cameraFwd = GetCameraForward();
+            Vector3 cameraRight = GetCameraRight();
+            Vector3 wishDir = cameraRight * _moveInput.x + cameraFwd * _moveInput.y;
             float wishSpeed = walkSpeed;
 
             Vector3 horizontalVel = new Vector3(_velocity.x, 0f, _velocity.z);
@@ -478,6 +569,16 @@ namespace DungeonBlade.Player
             _velocity.y += gravity * Time.deltaTime;
 
             _controller.Move(_velocity * Time.deltaTime);
+
+            // Body rotates toward movement direction so the forward-run animation
+            // visually matches the world-space travel direction (S backpedals,
+            // A/D strafe). Camera rotation is independent — see UpdateLook.
+            if (faceMovementDirection && wishDir.sqrMagnitude > 0.01f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(wishDir, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation, targetRot, characterTurnSpeed * Time.deltaTime);
+            }
         }
     }
 }

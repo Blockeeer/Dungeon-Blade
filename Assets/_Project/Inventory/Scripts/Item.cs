@@ -4,6 +4,7 @@ namespace DungeonBlade.Inventory
 {
     public enum ItemType { Misc, Weapon, Consumable, Material, KeyItem }
     public enum EquipmentSlot { None, Head, Body, MainHand, OffHand }
+    public enum ItemRank { Common, Rare, Legend }
 
     [CreateAssetMenu(menuName = "DungeonBlade/Item/Misc Item", fileName = "NewItem")]
     public class Item : ScriptableObject
@@ -18,6 +19,7 @@ namespace DungeonBlade.Inventory
         [Header("Type")]
         [SerializeField] ItemType type = ItemType.Misc;
         [SerializeField] EquipmentSlot equipSlot = EquipmentSlot.None;
+        [SerializeField] ItemRank rank = ItemRank.Common;
 
         [Header("Stack")]
         [SerializeField] bool stackable = true;
@@ -33,6 +35,7 @@ namespace DungeonBlade.Inventory
         public Sprite Icon => icon;
         public ItemType Type => type;
         public EquipmentSlot EquipSlot => equipSlot;
+        public ItemRank Rank => rank;
         public bool Stackable => stackable;
         public int MaxStack => stackable ? Mathf.Max(1, maxStack) : 1;
         public int SellValue => sellValue;

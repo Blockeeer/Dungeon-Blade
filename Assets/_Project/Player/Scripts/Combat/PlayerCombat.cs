@@ -1,3 +1,4 @@
+using System;
 using DungeonBlade.Combat;
 using DungeonBlade.Core;
 using UnityEngine;
@@ -16,6 +17,11 @@ namespace DungeonBlade.Player
         int _activeIndex = -1;
 
         public WeaponBase Active => _active;
+
+        public event Action AttackPerformed;
+        public event Action HeavyAttackPerformed;
+        public event Action ReloadPerformed;
+        public event Action<WeaponBase> WeaponEquipped;
 
         void Start()
         {
@@ -62,11 +68,13 @@ namespace DungeonBlade.Player
                 if (_active is Sword s && _input.AimOrBlock.IsPressed())
                 {
                     s.StartHeavyHold();
+                    HeavyAttackPerformed?.Invoke();
                 }
                 else
                 {
                     TryGunZCancel();
                     _active.OnPrimaryPressed();
+                    AttackPerformed?.Invoke();
                 }
             }
 
@@ -78,7 +86,11 @@ namespace DungeonBlade.Player
 
             if (_input.AimOrBlock.WasPressedThisFrame()) _active.OnSecondaryPressed();
             if (_input.AimOrBlock.WasReleasedThisFrame()) _active.OnSecondaryReleased();
-            if (_input.Reload.WasPressedThisFrame()) _active.OnReloadPressed();
+            if (_input.Reload.WasPressedThisFrame())
+            {
+                _active.OnReloadPressed();
+                ReloadPerformed?.Invoke();
+            }
         }
 
         void TryGunZCancel()
@@ -110,6 +122,7 @@ namespace DungeonBlade.Player
             _activeIndex = index;
             _active = weapons[index];
             _active.OnEquip();
+            WeaponEquipped?.Invoke(_active);
 
             if (crosshair != null) crosshair.SetActive(true);
         }

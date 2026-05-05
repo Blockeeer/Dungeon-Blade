@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e6e9cc019666e148a3847b7fc6db54f, type: 3}
+  m_Name: Item_PistolBlue
+  m_EditorClassIdentifier: 
+  itemId: pistolblue
+  displayName: Pistol Blue
+  description: 
+  icon: {fileID: 0}
+  type: 1
+  equipSlot: 3
+  rank: 1
+  stackable: 0
+  maxStack: 99
+  sellValue: 120
+  buyValue: 480
+  weaponPrefab: {fileID: 0}
+  weaponKind: 1
+  damageBonus: 0
