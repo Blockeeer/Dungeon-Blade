@@ -19,6 +19,7 @@ namespace DungeonBlade.Dungeon
 
         public event Action<int> OnRespawnsChanged;
         public event Action OnRunFailed;
+        public event Action OnPlayerRespawned;
 
         PlayerStats _stats;
         CharacterController _controller;
@@ -83,6 +84,7 @@ namespace DungeonBlade.Dungeon
             Quaternion rot = Current != null ? Current.SpawnRotation : _initialRotation;
             TeleportTo(pos, rot);
             _stats.Revive(_stats.MaxHealth * respawnHealthPercent);
+            OnPlayerRespawned?.Invoke();
             Debug.Log($"[Respawn] Respawned. {RespawnsRemaining} remaining.");
         }
 

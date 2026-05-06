@@ -39,6 +39,23 @@ namespace DungeonBlade.Boss
             Debug.Log($"[Boss] {name} activated.");
         }
 
+        public virtual void ResetForRetry()
+        {
+            ReapplyStats();
+            State = EnemyState.Idle;
+            Target = null;
+            Phase = BossPhase.Dormant;
+            _started = false;
+            _pendingNextPhase = BossPhase.Phase1;
+            TransitionEndTime = -1f;
+            transform.position = SpawnPosition;
+            if (Agent != null && Agent.isOnNavMesh) Agent.ResetPath();
+            Agent.enabled = false;
+            OnBossHealthChanged?.Invoke(Health, Stats.MaxHealth);
+            OnPhaseChanged?.Invoke(Phase);
+            Debug.Log($"[Boss] {name} reset for retry.");
+        }
+
         public override void ApplyDamage(in DamageInfo info)
         {
             if (!IsAlive) return;
