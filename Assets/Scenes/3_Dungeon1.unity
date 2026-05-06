@@ -1781,6 +1781,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerStats: {fileID: 1376226051}
   playerMovement: {fileID: 1376226050}
+  playerCombat: {fileID: 1376226057}
   inventory: {fileID: 246616246}
   swordSwing: {fileID: 8300000, guid: c50905c9f4a8fe84388362d801b846fc, type: 3}
   swordHit: {fileID: 8300000, guid: 86a7dd83eeb95f64c87cd61f01317ab7, type: 3}
@@ -13475,6 +13476,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1935973265}
   m_CullTransparentMesh: 1
+--- !u!1 &1936156558
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1936156560}
+  - component: {fileID: 1936156559}
+  m_Layer: 0
+  m_Name: SfxPool
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1936156559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1936156558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a5d63761b67d9a4d9b868626a10ed3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  poolSize: 12
+  sfxGroup: {fileID: -3706298163590136472, guid: 6009fb6f81d9aa340b763f194fb28c3d,
+    type: 2}
+--- !u!4 &1936156560
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1936156558}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 332.0177, y: -158.42938, z: 408.52676}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1952213120
 GameObject:
   m_ObjectHideFlags: 0
@@ -14452,3 +14500,4 @@ SceneRoots:
   - {fileID: 849010955}
   - {fileID: 469524110}
   - {fileID: 329621018}
+  - {fileID: 1936156560}
