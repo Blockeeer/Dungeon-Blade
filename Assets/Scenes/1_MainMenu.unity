@@ -823,29 +823,39 @@ MonoBehaviour:
   heroModels:
   - id: lyra
     prefab: {fileID: 919132149155446097, guid: 643886bd88e26fa4a9e20b16d7487f96, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+    previewClip: {fileID: -203655887218126122, guid: dcc486bf5d01c7546bd5d961c0dc2364,
       type: 3}
+    gender: 1
   - id: mira
     prefab: {fileID: 919132149155446097, guid: 548096f7c25d19b45b4f5c3396401170, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+    previewClip: {fileID: -203655887218126122, guid: 39ea884cef9c52849911459bca2ffef1,
       type: 3}
+    gender: 1
   - id: aurelia
     prefab: {fileID: 919132149155446097, guid: f95f82db684db82458aaed4a7b7106f7, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+    previewClip: {fileID: -203655887218126122, guid: fbac279dce13c314bad80a6c721cb2eb,
       type: 3}
+    gender: 1
   - id: kaelen
     prefab: {fileID: 919132149155446097, guid: 3353a4eb58a6ed74a99e141bafc10ccc, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
-      type: 3}
-  - id: wayne
-    prefab: {fileID: 919132149155446097, guid: 42fadf533f0db2c41981da1b5a78ece3, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
-      type: 3}
-  - id: varion
-    prefab: {fileID: 919132149155446097, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
     previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
       type: 3}
+    gender: 0
+  - id: wayne
+    prefab: {fileID: 919132149155446097, guid: 42fadf533f0db2c41981da1b5a78ece3, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+      type: 3}
+    gender: 0
+  - id: varion
+    prefab: {fileID: 919132149155446097, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
+    previewClip: {fileID: -203655887218126122, guid: 293a055f290de0344911d64d7674b4a0,
+      type: 3}
+    gender: 0
   heroIdleClip: {fileID: -203655887218126122, guid: 6322c0e1c6780774db49439065d69b0a,
+    type: 3}
+  idleClipMale: {fileID: -203655887218126122, guid: 8b089c3f8fb4b7b4786fd6aacf9c7754,
+    type: 3}
+  idleClipFemale: {fileID: -203655887218126122, guid: 37b0354bc0ad4944d94abda846395cc9,
     type: 3}
   heroAvatar: {fileID: 9000000, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
 --- !u!1 &477842283

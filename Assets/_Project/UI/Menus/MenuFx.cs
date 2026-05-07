@@ -97,10 +97,10 @@ namespace DungeonBlade.UI.Menus
             glow.rectTransform.anchorMin = new Vector2(0.5f, 0f);
             glow.rectTransform.anchorMax = new Vector2(0.5f, 0f);
             glow.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            glow.rectTransform.anchoredPosition = new Vector2(0f, -200f);
-            glow.rectTransform.sizeDelta = new Vector2(1800f, 1000f);
+            glow.rectTransform.anchoredPosition = new Vector2(0f, -100f);
+            glow.rectTransform.sizeDelta = new Vector2(2600f, 1700f);
             glow.sprite = RedGlowSprite();
-            glow.color = new Color(1f, 1f, 1f, 0.45f);
+            glow.color = new Color(1f, 1f, 1f, 0.32f);
             glow.raycastTarget = false;
 
             var scan = CreateImage(rt, "Scanlines", idx++);
@@ -336,14 +336,18 @@ namespace DungeonBlade.UI.Menus
 
         static Texture2D BuildVerticalGradient(Color top, Color mid, Color bottom)
         {
-            const int h = 256;
+            const int h = 512;
             var tex = new Texture2D(2, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             for (int y = 0; y < h; y++)
             {
                 float t = y / (float)(h - 1);
-                Color c = t < 0.5f
-                    ? Color.Lerp(bottom, mid, t * 2f)
-                    : Color.Lerp(mid, top, (t - 0.5f) * 2f);
+                float s = Mathf.SmoothStep(0f, 1f, t);
+                float u = 1f - s;
+                Color c = new Color(
+                    u * u * bottom.r + 2f * u * s * mid.r + s * s * top.r,
+                    u * u * bottom.g + 2f * u * s * mid.g + s * s * top.g,
+                    u * u * bottom.b + 2f * u * s * mid.b + s * s * top.b,
+                    1f);
                 tex.SetPixel(0, y, c);
                 tex.SetPixel(1, y, c);
             }
@@ -393,7 +397,9 @@ namespace DungeonBlade.UI.Menus
             for (int x = 0; x < size; x++)
             {
                 float d = Vector2.Distance(new Vector2(x, y), c) / maxD;
-                float a = Mathf.Pow(Mathf.Clamp01(1f - d), 2.5f);
+                float k = Mathf.Clamp01(1f - d);
+                float a = Mathf.SmoothStep(0f, 1f, k);
+                a = Mathf.Pow(a, 1.4f);
                 tex.SetPixel(x, y, new Color(tint.r, tint.g, tint.b, a));
             }
             tex.Apply();

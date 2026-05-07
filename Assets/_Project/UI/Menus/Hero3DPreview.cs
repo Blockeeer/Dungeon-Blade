@@ -8,8 +8,8 @@ namespace DungeonBlade.UI.Menus
     {
         public RenderTexture RT { get; private set; }
 
-        const int RT_WIDTH = 512;
-        const int RT_HEIGHT = 704;
+        const int RT_WIDTH = 768;
+        const int RT_HEIGHT = 1056;
         const int PREVIEW_LAYER = 31;
         static readonly Vector3 RIG_WORLD_POS = new Vector3(10000f, 10000f, 10000f);
 
@@ -21,6 +21,7 @@ namespace DungeonBlade.UI.Menus
         AnimationClipPlayable _clipPlayable;
         double _clipLength;
         bool _graphValid;
+        Animator _currentAnimator;
 
         public static Hero3DPreview Create()
         {
@@ -52,12 +53,12 @@ namespace DungeonBlade.UI.Menus
             var camGO = new GameObject("PreviewCamera");
             camGO.transform.SetParent(transform, false);
             camGO.transform.localPosition = new Vector3(0f, 0.95f, -3.4f);
-            camGO.transform.localRotation = Quaternion.Euler(2f, 0f, 0f);
+            camGO.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
             _camera = camGO.AddComponent<Camera>();
             _camera.targetTexture = RT;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            _camera.fieldOfView = 28f;
+            _camera.fieldOfView = 32f;
             _camera.nearClipPlane = 0.05f;
             _camera.farClipPlane = 12f;
             _camera.allowHDR = false;
@@ -107,7 +108,8 @@ namespace DungeonBlade.UI.Menus
                 SetLayerRecursive(go.transform.GetChild(i).gameObject, layer);
         }
 
-        public void Show(string id, GameObject prefab, AnimationClip idleClip, Avatar fallbackAvatar, Color accent)
+        public void Show(string id, GameObject prefab, AnimationClip clip,
+                         Avatar fallbackAvatar, Color accent)
         {
             DisposeGraph();
             if (_currentModel != null)
@@ -115,6 +117,7 @@ namespace DungeonBlade.UI.Menus
                 Destroy(_currentModel);
                 _currentModel = null;
             }
+            _currentAnimator = null;
             if (prefab == null) return;
 
             _currentModel = Instantiate(prefab, _modelRoot);
@@ -135,7 +138,7 @@ namespace DungeonBlade.UI.Menus
             if (animator.avatar == null && fallbackAvatar != null)
                 animator.avatar = fallbackAvatar;
 
-            if (animator != null && idleClip != null)
+            if (animator != null && clip != null)
             {
                 animator.applyRootMotion = false;
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -145,29 +148,76 @@ namespace DungeonBlade.UI.Menus
                 _graph = PlayableGraph.Create("HeroPreview_" + id);
                 _graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
 
-                _clipPlayable = AnimationClipPlayable.Create(_graph, idleClip);
+                _clipPlayable = AnimationClipPlayable.Create(_graph, clip);
                 _clipPlayable.SetApplyFootIK(false);
 
                 var output = AnimationPlayableOutput.Create(_graph, "Anim", animator);
                 output.SetSourcePlayable(_clipPlayable);
 
-                _clipLength = idleClip.length > 0f ? idleClip.length : 1.0;
+                _clipLength = clip.length > 0f ? clip.length : 1.0;
                 _clipPlayable.SetTime(0.0);
 
                 _graph.Play();
                 animator.Rebind();
                 animator.Update(0f);
                 _graphValid = true;
+                _currentAnimator = animator;
+
+                FitModelToBox(animator);
             }
+        }
+
+        const float ANKLE_TO_SOLE = 0.085f;
+
+        void FitModelToBox(Animator animator)
+        {
+            if (_currentModel == null || animator == null || !animator.isHuman) return;
+
+            animator.Update(0.0167f);
+
+            var leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            var rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            var hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+
+            if (leftFoot == null || rightFoot == null) return;
+
+            float footY = Mathf.Min(leftFoot.position.y, rightFoot.position.y);
+            float soleY = footY - ANKLE_TO_SOLE;
+
+            float xCenter = hips != null
+                ? hips.position.x
+                : (leftFoot.position.x + rightFoot.position.x) * 0.5f;
+
+            Vector3 offset = new Vector3(
+                transform.position.x - xCenter,
+                transform.position.y - soleY,
+                0f);
+
+            _currentModel.transform.position += offset;
         }
 
         void LateUpdate()
         {
             if (!_graphValid || !_graph.IsValid() || !_clipPlayable.IsValid()) return;
-            if (_clipLength <= 0.0) return;
 
-            double t = _clipPlayable.GetTime();
-            if (t >= _clipLength) _clipPlayable.SetTime(t - _clipLength);
+            if (_clipLength > 0.0)
+            {
+                double t = _clipPlayable.GetTime();
+                if (t >= _clipLength) _clipPlayable.SetTime(t - _clipLength);
+            }
+
+            LockHipsXZ();
+        }
+
+        void LockHipsXZ()
+        {
+            if (_currentModel == null || _currentAnimator == null || !_currentAnimator.isHuman) return;
+            var hips = _currentAnimator.GetBoneTransform(HumanBodyBones.Hips);
+            if (hips == null) return;
+            float dx = transform.position.x - hips.position.x;
+            float dz = transform.position.z - hips.position.z;
+            if (Mathf.Abs(dx) < 0.0001f && Mathf.Abs(dz) < 0.0001f) return;
+            _currentModel.transform.position += new Vector3(dx, 0f, dz);
         }
 
         public void Hide()
