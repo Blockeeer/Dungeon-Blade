@@ -10,11 +10,24 @@ namespace DungeonBlade.UI.Menus
     public class CharacterSelectController
     {
         [Serializable]
+        public class WeaponAttachment
+        {
+            public GameObject prefab;
+            public HumanBodyBones bone = HumanBodyBones.RightHand;
+            public Vector3 localPosition;
+            public Vector3 localEulerAngles;
+            public Vector3 localScale = Vector3.one;
+            [Tooltip("If > 0, auto-scale weapon so its longest world dimension equals this value (in meters). Overrides localScale.")]
+            public float autoFitLength = 0f;
+        }
+
+        [Serializable]
         public class HeroModelEntry
         {
             public string id;
             public GameObject prefab;
             public AnimationClip previewClip;
+            public WeaponAttachment[] weapons;
         }
 
         public class Character
@@ -628,7 +641,7 @@ namespace DungeonBlade.UI.Menus
             if (_hero3D != null && _heroEntries.TryGetValue(c.id, out var entry))
             {
                 var clip = entry.previewClip != null ? entry.previewClip : _idleClip;
-                _hero3D.Show(c.id, entry.prefab, clip, _heroAvatar, c.accent);
+                _hero3D.Show(c.id, entry.prefab, clip, entry.weapons, _heroAvatar, c.accent);
                 if (_previewModelImage != null)
                 {
                     _previewModelImage.gameObject.SetActive(true);
