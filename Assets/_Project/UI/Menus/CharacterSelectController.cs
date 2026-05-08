@@ -34,22 +34,16 @@ namespace DungeonBlade.UI.Menus
         public static readonly Character[] Roster =
         {
             new Character {
-                id = "lyra", name = "LYRA", role = "PHANTOM  RAZOR",
-                accent = new Color(0.42f, 0.22f, 0.58f),
-                lore = "Few have seen Lyra and lived to describe her. The Brotherhood took her in as a child and trained her in the silence between heartbeats.\n\nShe moves through the dungeon's deepest shadows with twin razors and a hood that has never been pulled back in daylight. The dead, if they could speak, would call her by no name at all.",
-                str = 5, agi = 9, fin = 10, arc = 4
-            },
-            new Character {
                 id = "kaelen", name = "KAELEN", role = "SILENT  AVENGER",
                 accent = new Color(0.45f, 0.30f, 0.62f),
                 lore = "Once a sworn knight of the Crimson Vale, Kaelen renounced his oaths after watching his order betray its own. He walks the dungeon hooded and masked — a single sword in one hand, a pistol in the other.\n\nHis trainers said he could vanish between heartbeats. The dead would agree, if any could speak.",
                 str = 6, agi = 8, fin = 9, arc = 5
             },
             new Character {
-                id = "mira", name = "MIRA", role = "OUTLAW  SLINGER",
-                accent = new Color(0.78f, 0.18f, 0.30f),
-                lore = "Mira walked out of the Lower Quarters with a stolen revolver and a grin, and she has not stopped moving since. The dungeon, she says, is just another back alley with bigger rats.\n\nShe has always known how to handle rats. The choker at her throat is a souvenir; she doesn't say from whom.",
-                str = 5, agi = 8, fin = 9, arc = 4
+                id = "lyra", name = "LYRA", role = "PHANTOM  RAZOR",
+                accent = new Color(0.42f, 0.22f, 0.58f),
+                lore = "Few have seen Lyra and lived to describe her. The Brotherhood took her in as a child and trained her in the silence between heartbeats.\n\nShe moves through the dungeon's deepest shadows with twin razors and a hood that has never been pulled back in daylight. The dead, if they could speak, would call her by no name at all.",
+                str = 5, agi = 9, fin = 10, arc = 4
             },
             new Character {
                 id = "wayne", name = "WAYNE", role = "FREE  STRIDER",
@@ -58,16 +52,22 @@ namespace DungeonBlade.UI.Menus
                 str = 7, agi = 7, fin = 7, arc = 6
             },
             new Character {
-                id = "aurelia", name = "AURELIA", role = "DAWN  CAPTAIN",
-                accent = new Color(0.92f, 0.80f, 0.35f),
-                lore = "Captain Aurelia of the Eighth Order serves the throne as much as the throne serves her. She enters the dungeon under royal seal, sword and pistol drawn, on a hunt for a relic the Crown will not name.\n\nWhatever she finds down there, she has sworn to bring back. Or to bury, if the Crown gives that order instead.",
-                str = 8, agi = 6, fin = 7, arc = 7
+                id = "mira", name = "MIRA", role = "OUTLAW  SLINGER",
+                accent = new Color(0.78f, 0.18f, 0.30f),
+                lore = "Mira walked out of the Lower Quarters with a stolen revolver and a grin, and she has not stopped moving since. The dungeon, she says, is just another back alley with bigger rats.\n\nShe has always known how to handle rats. The choker at her throat is a souvenir; she doesn't say from whom.",
+                str = 5, agi = 8, fin = 9, arc = 4
             },
             new Character {
                 id = "varion", name = "VARION", role = "CRIMSON  REAVER",
                 accent = new Color(0.72f, 0.12f, 0.18f),
                 lore = "Varion lost his eye at the Siege of Black Brook and his name a year later. He wears the red-lined coat of a banner he no longer serves, and carries a longsword too heavy for any but him.\n\nThe dungeon's deepest dwellers know him not by sight, but by the silence that follows wherever he passes.",
                 str = 10, agi = 4, fin = 7, arc = 6
+            },
+            new Character {
+                id = "aurelia", name = "AURELIA", role = "DAWN  CAPTAIN",
+                accent = new Color(0.92f, 0.80f, 0.35f),
+                lore = "Captain Aurelia of the Eighth Order serves the throne as much as the throne serves her. She enters the dungeon under royal seal, sword and pistol drawn, on a hunt for a relic the Crown will not name.\n\nWhatever she finds down there, she has sworn to bring back. Or to bury, if the Crown gives that order instead.",
+                str = 8, agi = 6, fin = 7, arc = 7
             },
         };
 
@@ -84,6 +84,7 @@ namespace DungeonBlade.UI.Menus
         TMP_Text _loreText;
         TMP_Text[] _statValues = new TMP_Text[4];
         Image[] _statBars = new Image[4];
+        List<GameObject> _statGOs = new List<GameObject>();
         TMP_FontAsset _font;
 
         // Loading overlay
@@ -461,13 +462,13 @@ namespace DungeonBlade.UI.Menus
             BuildLoadingOverlay(colRT);
 
             _previewName = MenuFx.AddText(colRT, "PreviewName", _font,
-                new Vector2(0f, -160f), new Vector2(540f, 70f),
-                "LYRA", fontSize: 56,
+                new Vector2(0f, -290f), new Vector2(540f, 50f),
+                "LYRA", fontSize: 36,
                 color: MenuFx.SteelTint, spacing: 22f, style: FontStyles.Bold);
 
             _previewRole = MenuFx.AddText(colRT, "PreviewRole", _font,
-                new Vector2(0f, -210f), new Vector2(540f, 28f),
-                "PHANTOM  RAZOR", fontSize: 18,
+                new Vector2(0f, -325f), new Vector2(540f, 20f),
+                "PHANTOM  RAZOR", fontSize: 13,
                 color: MenuFx.AccentRed, spacing: 22f, style: FontStyles.Bold);
 
             BuildStats(colRT);
@@ -476,45 +477,49 @@ namespace DungeonBlade.UI.Menus
         void BuildStats(RectTransform parent)
         {
             string[] labels = { "STR", "AGI", "FIN", "ARC" };
-            float startY = -260f;
-            float rowH = 26f;
-            float barW = 360f;
+            float startY = -350f;
+            float rowH = 16f;
+            float barW = 320f;
 
             for (int i = 0; i < 4; i++)
             {
-                MenuFx.AddText(parent, labels[i] + "Label", _font,
+                var labelText = MenuFx.AddText(parent, labels[i] + "Label", _font,
                     new Vector2(-200f, startY - i * rowH),
                     new Vector2(60f, 24f),
                     labels[i], fontSize: 14,
                     color: new Color(MenuFx.MutedSteel.r, MenuFx.MutedSteel.g, MenuFx.MutedSteel.b, 0.8f),
-                    spacing: 8f, style: FontStyles.Bold)
-                    .alignment = TextAlignmentOptions.Left;
+                    spacing: 8f, style: FontStyles.Bold);
+                labelText.alignment = TextAlignmentOptions.Left;
+                _statGOs.Add(labelText.gameObject);
 
                 var trough = MenuFx.CreateImage(parent, labels[i] + "Trough", parent.childCount);
                 trough.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
                 trough.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
                 trough.rectTransform.pivot = new Vector2(0f, 0.5f);
                 trough.rectTransform.anchoredPosition = new Vector2(-130f, startY - i * rowH);
-                trough.rectTransform.sizeDelta = new Vector2(barW, 6f);
+                trough.rectTransform.sizeDelta = new Vector2(barW, 5f);
                 trough.color = new Color(0.10f, 0.13f, 0.18f, 0.9f);
                 trough.raycastTarget = false;
+                _statGOs.Add(trough.gameObject);
 
                 var fill = MenuFx.CreateImage(parent, labels[i] + "Fill", parent.childCount);
                 fill.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
                 fill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
                 fill.rectTransform.pivot = new Vector2(0f, 0.5f);
                 fill.rectTransform.anchoredPosition = new Vector2(-130f, startY - i * rowH);
-                fill.rectTransform.sizeDelta = new Vector2(barW * 0.5f, 6f);
+                fill.rectTransform.sizeDelta = new Vector2(barW * 0.5f, 5f);
                 fill.color = MenuFx.AccentRed;
                 fill.raycastTarget = false;
                 _statBars[i] = fill;
+                _statGOs.Add(fill.gameObject);
 
                 _statValues[i] = MenuFx.AddText(parent, labels[i] + "Value", _font,
-                    new Vector2(260f, startY - i * rowH),
-                    new Vector2(40f, 24f),
-                    "5", fontSize: 14,
+                    new Vector2(220f, startY - i * rowH),
+                    new Vector2(40f, 20f),
+                    "5", fontSize: 12,
                     color: MenuFx.SteelTint, spacing: 0f, style: FontStyles.Bold);
                 _statValues[i].alignment = TextAlignmentOptions.Right;
+                _statGOs.Add(_statValues[i].gameObject);
             }
         }
 
@@ -530,26 +535,14 @@ namespace DungeonBlade.UI.Menus
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0f, 110f);
-            rt.sizeDelta = new Vector2(320f, 440f);
+            rt.anchoredPosition = new Vector2(0f, 60f);
+            rt.sizeDelta = new Vector2(620f, 880f);
 
             _previewModelImage = modelGO.GetComponent<RawImage>();
             _previewModelImage.color = Color.white;
             _previewModelImage.raycastTarget = false;
             if (_hero3D != null) _previewModelImage.texture = _hero3D.RT;
             _previewModelImage.gameObject.SetActive(_hero3D != null);
-
-            var border = MenuFx.CreateImage(colRT, "PreviewBorder", colRT.childCount);
-            border.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            border.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            border.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            border.rectTransform.anchoredPosition = new Vector2(0f, 110f);
-            border.rectTransform.sizeDelta = new Vector2(324f, 444f);
-            border.sprite = MenuFx.RoundedBorderSprite();
-            border.type = Image.Type.Sliced;
-            border.pixelsPerUnitMultiplier = 1f;
-            border.color = new Color(1f, 1f, 1f, 0.18f);
-            border.raycastTarget = false;
         }
 
         void BuildLoadingOverlay(RectTransform colRT)
@@ -564,8 +557,8 @@ namespace DungeonBlade.UI.Menus
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0f, 110f);
-            rt.sizeDelta = new Vector2(320f, 440f);
+            rt.anchoredPosition = new Vector2(0f, 60f);
+            rt.sizeDelta = new Vector2(620f, 880f);
 
             _loadOverlayGroup = overlayGO.GetComponent<CanvasGroup>();
             _loadOverlayGroup.alpha = 0f;
@@ -574,7 +567,7 @@ namespace DungeonBlade.UI.Menus
 
             _loadOverlayBg = MenuFx.CreateImage(rt, "Bg", rt.childCount);
             MenuFx.StretchFull(_loadOverlayBg.rectTransform);
-            _loadOverlayBg.color = new Color(0.02f, 0.025f, 0.04f, 0.92f);
+            _loadOverlayBg.color = new Color(0.02f, 0.025f, 0.04f, 0.85f);
             _loadOverlayBg.raycastTarget = false;
 
             var scan = MenuFx.CreateImage(rt, "Scanlines", rt.childCount);
@@ -620,7 +613,7 @@ namespace DungeonBlade.UI.Menus
 
         IEnumerator LoadingEffectCo(Character c)
         {
-            const float halfH = 220f;
+            const float halfH = 440f;
             const float sweepDur = 0.45f;
             const float holdDur = 0.06f;
             const float fadeDur = 0.20f;
@@ -828,13 +821,15 @@ namespace DungeonBlade.UI.Menus
 
             bool has3D = _hero3D != null && _heroEntries != null && _heroEntries.ContainsKey(c.id);
 
+            if (_previewBadge != null)
+                _previewBadge.gameObject.SetActive(!has3D);
+
             if (_previewPortrait != null)
             {
                 if (has3D)
                 {
                     _previewPortrait.gameObject.SetActive(false);
                     _previewLetter.gameObject.SetActive(false);
-                    _previewBadge.color = MultColor(c.accent, 0.18f, 0.85f);
                 }
                 else if (c.portrait != null)
                 {
@@ -853,6 +848,11 @@ namespace DungeonBlade.UI.Menus
             if (_previewModelImage != null)
                 _previewModelImage.gameObject.SetActive(has3D);
 
+            if (_previewName != null) _previewName.gameObject.SetActive(true);
+            if (_previewRole != null) _previewRole.gameObject.SetActive(true);
+            foreach (var go in _statGOs)
+                if (go != null) go.SetActive(true);
+
             if (has3D) PlayLoadingEffect(c);
             else if (_loadOverlayGroup != null) _loadOverlayGroup.alpha = 0f;
 
@@ -861,7 +861,7 @@ namespace DungeonBlade.UI.Menus
             {
                 _statValues[k].text = stats[k].ToString();
                 var fillRT = _statBars[k].rectTransform;
-                fillRT.sizeDelta = new Vector2(360f * Mathf.Clamp01(stats[k] / 10f), 6f);
+                fillRT.sizeDelta = new Vector2(320f * Mathf.Clamp01(stats[k] / 10f), 5f);
                 _statBars[k].color = c.accent;
             }
         }
