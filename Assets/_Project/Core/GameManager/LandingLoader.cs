@@ -29,18 +29,27 @@ namespace DungeonBlade.Core
         Image _vignette;
         Image _accentTop;
         Image _accentBottom;
-        Image _redGlow;
 
+        Image _logoImage;
         RectTransform _logoRT;
         CanvasGroup _logoCG;
-        RectTransform _titleRT;
-        CanvasGroup _titleCG;
-        TMP_Text _titleText;
-        CanvasGroup _titleEchoCG;
+        Image _logoHalo;
+        Image _logoEcho;
+        RectTransform _logoEchoRT;
+        Image _logoEchoCyan;
+        RectTransform _logoEchoCyanRT;
+        Image _flashBurst;
+        Image _slashSweep;
+        RectTransform _slashSweepRT;
         TMP_Text _subtitle;
         TMP_Text _prompt;
         CanvasGroup _promptCG;
         TMP_Text _legalText;
+
+        Vector2 _logoBasePos;
+        Vector2 _logoSize;
+        bool _jolting;
+        static readonly Color AccentCyan = new Color(0.35f, 0.85f, 1f, 1f);
 
         void Start()
         {
@@ -134,13 +143,6 @@ namespace DungeonBlade.Core
                 _bgGradient.type = Image.Type.Simple;
             }
 
-            _redGlow = CreateImage(canvasRT, "RedGlow", siblingIndex: 1);
-            StretchAnchored(_redGlow.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, -200f), new Vector2(1600f, 900f));
-            _redGlow.sprite = SpriteFromTexture(BuildRadialGlow(AccentRed));
-            _redGlow.color = new Color(1f, 1f, 1f, 0.55f);
-            _redGlow.raycastTarget = false;
-
             _scanlines = CreateImage(canvasRT, "Scanlines", siblingIndex: 2);
             StretchFull(_scanlines.rectTransform);
             var scanTex = BuildScanlineTexture();
@@ -159,66 +161,87 @@ namespace DungeonBlade.Core
             var existingTitle = _canvas.transform.Find("Title");
             int titleSibling = existingTitle != null ? existingTitle.GetSiblingIndex() : _canvas.transform.childCount;
 
+            // Hide the legacy "DUNGEON BLADE" title — the logo now carries the wordmark.
+            if (existingTitle != null) existingTitle.gameObject.SetActive(false);
+
+            // Frame the logo top/bottom — well clear of the artwork.
             _accentTop = CreateImage(canvasRT, "AccentBarTop", siblingIndex: titleSibling);
-            ConfigureAccent(_accentTop.rectTransform, yOffset: 95f);
-            _accentTop.color = AccentRed;
+            ConfigureAccent(_accentTop.rectTransform, yOffset: 310f);
+            _accentTop.color = new Color(AccentRed.r, AccentRed.g, AccentRed.b, 0.65f);
             _accentTop.raycastTarget = false;
 
             _accentBottom = CreateImage(canvasRT, "AccentBarBottom", siblingIndex: titleSibling);
-            ConfigureAccent(_accentBottom.rectTransform, yOffset: -95f);
-            _accentBottom.color = new Color(AccentRed.r, AccentRed.g, AccentRed.b, 0.55f);
+            ConfigureAccent(_accentBottom.rectTransform, yOffset: -260f);
+            _accentBottom.color = new Color(AccentRed.r, AccentRed.g, AccentRed.b, 0.65f);
             _accentBottom.raycastTarget = false;
+
+            TMP_FontAsset titleFont = null;
+            var titleTextRef = existingTitle != null ? existingTitle.GetComponent<TMP_Text>() : null;
+            if (titleTextRef != null) titleFont = titleTextRef.font;
 
             var existingLogo = _canvas.transform.Find("Logo");
             if (existingLogo != null)
             {
                 _logoRT = existingLogo as RectTransform;
+                _logoImage = existingLogo.GetComponent<Image>();
                 _logoCG = existingLogo.GetComponent<CanvasGroup>();
                 if (_logoCG == null) _logoCG = existingLogo.gameObject.AddComponent<CanvasGroup>();
-                _logoRT.anchoredPosition = new Vector2(0f, 220f);
-                _logoRT.sizeDelta = new Vector2(360f, 360f);
-            }
 
-            if (existingTitle != null)
-            {
-                _titleRT = existingTitle as RectTransform;
-                _titleText = existingTitle.GetComponent<TMP_Text>();
-                _titleCG = existingTitle.GetComponent<CanvasGroup>();
-                if (_titleCG == null) _titleCG = existingTitle.gameObject.AddComponent<CanvasGroup>();
-                if (_titleText != null)
+                _logoSize = new Vector2(900f, 495f);
+                _logoBasePos = new Vector2(0f, 40f);
+                _logoRT.anchorMin = new Vector2(0.5f, 0.5f);
+                _logoRT.anchorMax = new Vector2(0.5f, 0.5f);
+                _logoRT.pivot = new Vector2(0.5f, 0.5f);
+                _logoRT.anchoredPosition = _logoBasePos;
+                _logoRT.sizeDelta = _logoSize;
+
+                if (_logoImage != null)
                 {
-                    _titleText.text = "DUNGEON  BLADE";
-                    _titleText.fontSize = 110;
-                    _titleText.fontStyle = FontStyles.Bold;
-                    _titleText.color = SteelTint;
-                    _titleText.characterSpacing = 18f;
-                    _titleText.enableVertexGradient = true;
-                    _titleText.colorGradient = new VertexGradient(
-                        SteelTint, SteelTint, MutedSteel, MutedSteel);
+                    var logoSprite = Resources.Load<Sprite>("UI/Logo-no-BG");
+                    if (logoSprite != null) _logoImage.sprite = logoSprite;
+                    _logoImage.preserveAspect = true;
+                    _logoImage.color = Color.white;
+                    _logoImage.raycastTarget = false;
                 }
-                _titleRT.anchoredPosition = new Vector2(0f, -40f);
-                _titleRT.sizeDelta = new Vector2(1400f, 200f);
+
+                // Cyan echo (chromatic aberration: cyan offset opposite to red).
+                _logoEchoCyan = CreateImage(canvasRT, "LogoEchoCyan", siblingIndex: _logoRT.GetSiblingIndex());
+                _logoEchoCyanRT = _logoEchoCyan.rectTransform;
+                AnchorCenter(_logoEchoCyanRT, _logoBasePos + new Vector2(-6f, 4f), _logoSize);
+                if (_logoImage != null && _logoImage.sprite != null) _logoEchoCyan.sprite = _logoImage.sprite;
+                _logoEchoCyan.preserveAspect = true;
+                _logoEchoCyan.color = new Color(AccentCyan.r, AccentCyan.g, AccentCyan.b, 0.30f);
+                _logoEchoCyan.raycastTarget = false;
+
+                // Red-tinted echo of the logo (chromatic aberration, sits behind logo).
+                _logoEcho = CreateImage(canvasRT, "LogoEcho", siblingIndex: _logoRT.GetSiblingIndex());
+                _logoEchoRT = _logoEcho.rectTransform;
+                AnchorCenter(_logoEchoRT, _logoBasePos + new Vector2(6f, -4f), _logoSize);
+                if (_logoImage != null && _logoImage.sprite != null) _logoEcho.sprite = _logoImage.sprite;
+                _logoEcho.preserveAspect = true;
+                _logoEcho.color = new Color(AccentRed.r, AccentRed.g, AccentRed.b, 0.40f);
+                _logoEcho.raycastTarget = false;
             }
 
-            var titleEcho = CreateText(canvasRT, "TitleEcho", _titleText != null ? _titleText.font : null);
-            if (titleEcho != null && _titleText != null)
-            {
-                AnchorCenter(titleEcho.rectTransform, new Vector2(4f, -44f), _titleRT.sizeDelta);
-                titleEcho.text = _titleText.text;
-                titleEcho.fontSize = _titleText.fontSize;
-                titleEcho.fontStyle = _titleText.fontStyle;
-                titleEcho.alignment = _titleText.alignment;
-                titleEcho.characterSpacing = _titleText.characterSpacing;
-                titleEcho.color = new Color(AccentRed.r, AccentRed.g, AccentRed.b, 0.35f);
-                titleEcho.raycastTarget = false;
-                titleEcho.transform.SetSiblingIndex(_titleRT.GetSiblingIndex());
-                _titleEchoCG = titleEcho.gameObject.AddComponent<CanvasGroup>();
-            }
+            // Horizontal slash sweep that whips across the logo on entrance.
+            _slashSweep = CreateImage(canvasRT, "SlashSweep", siblingIndex: titleSibling);
+            _slashSweepRT = _slashSweep.rectTransform;
+            AnchorCenter(_slashSweepRT, _logoBasePos, new Vector2(2200f, 8f));
+            _slashSweep.sprite = SpriteFromTexture(BuildHorizontalSweepTexture());
+            _slashSweep.color = new Color(1f, 1f, 1f, 0f);
+            _slashSweep.raycastTarget = false;
 
-            _subtitle = CreateText(canvasRT, "Subtitle", _titleText != null ? _titleText.font : null);
+            // White flash burst that explodes outward on entrance.
+            _flashBurst = CreateImage(canvasRT, "FlashBurst", siblingIndex: titleSibling);
+            AnchorCenter(_flashBurst.rectTransform, _logoBasePos, new Vector2(900f, 900f));
+            _flashBurst.sprite = SpriteFromTexture(BuildRadialGlow(Color.white));
+            _flashBurst.color = new Color(1f, 1f, 1f, 0f);
+            _flashBurst.raycastTarget = false;
+
+            _subtitle = CreateText(canvasRT, "Subtitle", titleFont);
             if (_subtitle != null)
             {
-                AnchorCenter(_subtitle.rectTransform, new Vector2(0f, -130f), new Vector2(1200f, 40f));
+                AnchorCenter(_subtitle.rectTransform, new Vector2(0f, -210f), new Vector2(1200f, 40f));
                 _subtitle.text = "— A   B L A D E   &   G U N   D U E L —";
                 _subtitle.fontSize = 24;
                 _subtitle.alignment = TextAlignmentOptions.Center;
@@ -251,7 +274,7 @@ namespace DungeonBlade.Core
                 promptRT.sizeDelta = new Vector2(700f, 40f);
             }
 
-            _legalText = CreateText(canvasRT, "Legal", _titleText != null ? _titleText.font : null);
+            _legalText = CreateText(canvasRT, "Legal", titleFont);
             if (_legalText != null)
             {
                 _legalText.rectTransform.anchorMin = new Vector2(0.5f, 0f);
@@ -273,32 +296,48 @@ namespace DungeonBlade.Core
         IEnumerator EntranceRoutine()
         {
             if (_logoCG != null) _logoCG.alpha = 0f;
-            if (_titleCG != null) _titleCG.alpha = 0f;
-            if (_titleEchoCG != null) _titleEchoCG.alpha = 0f;
             if (_subtitle != null) _subtitle.alpha = 0f;
             if (_promptCG != null) _promptCG.alpha = 0f;
             if (_accentTop != null) _accentTop.rectTransform.localScale = new Vector3(0f, 1f, 1f);
             if (_accentBottom != null) _accentBottom.rectTransform.localScale = new Vector3(0f, 1f, 1f);
-
-            yield return Tween(0.4f, t =>
+            if (_logoHalo != null) _logoHalo.color = new Color(1f, 1f, 1f, 0f);
+            if (_logoEcho != null)
             {
-                if (_logoCG != null) _logoCG.alpha = t;
-                if (_logoRT != null) _logoRT.localScale = Vector3.one * Mathf.Lerp(1.15f, 1f, t);
+                var c = _logoEcho.color; c.a = 0f; _logoEcho.color = c;
+            }
+            if (_logoEchoCyan != null)
+            {
+                var c = _logoEchoCyan.color; c.a = 0f; _logoEchoCyan.color = c;
+            }
+            if (_flashBurst != null) _flashBurst.color = new Color(1f, 1f, 1f, 0f);
+            if (_slashSweep != null) _slashSweep.color = new Color(1f, 1f, 1f, 0f);
+
+            // Logo fades in while scaling down from 1.25 → 1.0.
+            yield return Tween(0.55f, t =>
+            {
+                float e = EaseOutCubic(t);
+                if (_logoCG != null) _logoCG.alpha = e;
+                if (_logoRT != null) _logoRT.localScale = Vector3.one * Mathf.Lerp(1.25f, 1f, e);
+                if (_logoEcho != null)
+                {
+                    var c = _logoEcho.color; c.a = 0.40f * e; _logoEcho.color = c;
+                }
+                if (_logoEchoCyan != null)
+                {
+                    var c = _logoEchoCyan.color; c.a = 0.30f * e; _logoEchoCyan.color = c;
+                }
             });
+
+            // Flash burst — bright pop that fades out as it expands.
+            StartCoroutine(FlashBurstRoutine());
+            // Slash sweep — horizontal whip across the logo.
+            StartCoroutine(SlashSweepRoutine());
 
             yield return Tween(0.35f, t =>
             {
                 float s = EaseOutCubic(t);
                 if (_accentTop != null) _accentTop.rectTransform.localScale = new Vector3(s, 1f, 1f);
                 if (_accentBottom != null) _accentBottom.rectTransform.localScale = new Vector3(s, 1f, 1f);
-            });
-
-            yield return Tween(0.5f, t =>
-            {
-                if (_titleCG != null) _titleCG.alpha = t;
-                if (_titleEchoCG != null) _titleEchoCG.alpha = t;
-                if (_titleRT != null)
-                    _titleRT.anchoredPosition = new Vector2(0f, Mathf.Lerp(-80f, -40f, EaseOutCubic(t)));
             });
 
             yield return Tween(0.35f, t =>
@@ -313,6 +352,119 @@ namespace DungeonBlade.Core
 
             StartCoroutine(PromptPulseRoutine());
             StartCoroutine(LogoBreathRoutine());
+            StartCoroutine(HaloPulseRoutine());
+            StartCoroutine(LogoEchoDriftRoutine());
+            StartCoroutine(ElectricJoltRoutine());
+        }
+
+        IEnumerator FlashBurstRoutine()
+        {
+            if (_flashBurst == null) yield break;
+            var rt = _flashBurst.rectTransform;
+            float dur = 0.45f;
+            float t = 0f;
+            Vector2 start = new Vector2(600f, 600f);
+            Vector2 end = new Vector2(1500f, 1500f);
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float e = EaseOutCubic(k);
+                rt.sizeDelta = Vector2.Lerp(start, end, e);
+                _flashBurst.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.85f, 0f, e));
+                yield return null;
+            }
+            _flashBurst.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        IEnumerator HaloPulseRoutine()
+        {
+            if (_logoHalo == null) yield break;
+            float t0 = Time.unscaledTime;
+            while (!_advancing)
+            {
+                float k = (Time.unscaledTime - t0) * 1.1f;
+                float a = 0.55f + Mathf.Sin(k) * 0.20f;
+                float s = 1f + Mathf.Sin(k * 0.85f) * 0.05f;
+                _logoHalo.color = new Color(1f, 1f, 1f, Mathf.Clamp01(a));
+                _logoHalo.rectTransform.localScale = new Vector3(s, s, 1f);
+                yield return null;
+            }
+        }
+
+        IEnumerator LogoEchoDriftRoutine()
+        {
+            if (_logoEchoRT == null && _logoEchoCyanRT == null) yield break;
+            float t0 = Time.unscaledTime;
+            while (!_advancing)
+            {
+                float k = (Time.unscaledTime - t0) * 1.6f;
+                float dx = 5f + Mathf.Sin(k) * 3f;
+                float dy = -3f + Mathf.Cos(k * 0.9f) * 2.5f;
+                if (_logoEchoRT != null)
+                    _logoEchoRT.anchoredPosition = _logoBasePos + new Vector2(dx, dy);
+                if (_logoEchoCyanRT != null)
+                    _logoEchoCyanRT.anchoredPosition = _logoBasePos + new Vector2(-dx, -dy);
+                yield return null;
+            }
+        }
+
+        IEnumerator SlashSweepRoutine()
+        {
+            if (_slashSweep == null || _slashSweepRT == null) yield break;
+            float dur = 0.55f;
+            float t = 0f;
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float e = EaseOutCubic(k);
+                // Slide a thick horizontal bar of light across the canvas.
+                float x = Mathf.Lerp(-1400f, 1400f, e);
+                _slashSweepRT.anchoredPosition = _logoBasePos + new Vector2(x, 0f);
+                float a = Mathf.Sin(k * Mathf.PI);
+                _slashSweep.color = new Color(1f, 1f, 1f, a);
+                yield return null;
+            }
+            _slashSweep.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        IEnumerator ElectricJoltRoutine()
+        {
+            // Periodic "electric pulse" — boosts halo, briefly nudges echoes apart, tiny logo kick.
+            float wait = 3.2f;
+            float elapsed = 0f;
+            while (!_advancing)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (elapsed < wait) { yield return null; continue; }
+                elapsed = 0f;
+                wait = Random.Range(2.6f, 4.2f);
+                _jolting = true;
+
+                float dur = 0.28f;
+                float t = 0f;
+                while (t < dur)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float k = Mathf.Clamp01(t / dur);
+                    float pulse = Mathf.Sin(k * Mathf.PI);
+                    if (_logoHalo != null)
+                    {
+                        var c = _logoHalo.color; c.a = Mathf.Clamp01(c.a + pulse * 0.35f); _logoHalo.color = c;
+                    }
+                    if (_logoRT != null)
+                    {
+                        // Tiny kick: scale + shake.
+                        float shake = (Random.value - 0.5f) * 4f * pulse;
+                        _logoRT.localScale = Vector3.one * (1f + 0.025f * pulse);
+                        _logoRT.anchoredPosition = _logoBasePos + new Vector2(shake, 0f);
+                    }
+                    yield return null;
+                }
+                if (_logoRT != null) _logoRT.localScale = Vector3.one;
+                _jolting = false;
+            }
         }
 
         IEnumerator PromptPulseRoutine()
@@ -335,9 +487,16 @@ namespace DungeonBlade.Core
             float t0 = Time.unscaledTime;
             while (!_advancing)
             {
-                float k = (Time.unscaledTime - t0) * 1.4f;
-                float s = 1f + Mathf.Sin(k) * 0.012f;
-                if (_logoRT != null) _logoRT.localScale = new Vector3(s, s, 1f);
+                if (!_jolting && _logoRT != null)
+                {
+                    float k = (Time.unscaledTime - t0) * 1.4f;
+                    float s = 1f + Mathf.Sin(k) * 0.018f;
+                    float yFloat = Mathf.Sin(k * 0.7f) * 4f;
+                    float tiltZ = Mathf.Sin(k * 0.55f) * 0.6f;
+                    _logoRT.localScale = new Vector3(s, s, 1f);
+                    _logoRT.anchoredPosition = _logoBasePos + new Vector2(0f, yFloat);
+                    _logoRT.localRotation = Quaternion.Euler(0f, 0f, tiltZ);
+                }
                 yield return null;
             }
         }
@@ -466,6 +625,22 @@ namespace DungeonBlade.Core
                 float d = Vector2.Distance(new Vector2(x, y), c) / maxD;
                 float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((d - 0.55f) / 0.45f));
                 tex.SetPixel(x, y, new Color(0f, 0f, 0f, a));
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        static Texture2D BuildHorizontalSweepTexture()
+        {
+            // Soft horizontal bar — opaque white center fading to transparent at the edges.
+            const int w = 256;
+            const int h = 8;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int x = 0; x < w; x++)
+            {
+                float u = x / (float)(w - 1);
+                float a = Mathf.Pow(Mathf.Sin(u * Mathf.PI), 2.5f);
+                for (int y = 0; y < h; y++) tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
             }
             tex.Apply();
             return tex;

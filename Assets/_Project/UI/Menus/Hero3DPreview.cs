@@ -111,6 +111,13 @@ namespace DungeonBlade.UI.Menus
         public void Show(string id, GameObject prefab, AnimationClip clip,
                          Avatar fallbackAvatar, Color accent)
         {
+            Show(id, prefab, clip, null, fallbackAvatar, accent);
+        }
+
+        public void Show(string id, GameObject prefab, AnimationClip clip,
+                         CharacterSelectController.WeaponAttachment[] weapons,
+                         Avatar fallbackAvatar, Color accent)
+        {
             DisposeGraph();
             if (_currentModel != null)
             {
@@ -164,6 +171,161 @@ namespace DungeonBlade.UI.Menus
                 _currentAnimator = animator;
 
                 FitModelToBox(animator);
+                AttachWeapons(animator, weapons);
+            }
+        }
+
+        void AttachWeapons(Animator animator, CharacterSelectController.WeaponAttachment[] weapons)
+        {
+            if (weapons == null || animator == null || !animator.isHuman) return;
+            foreach (var w in weapons)
+            {
+                if (w == null || w.prefab == null) continue;
+                var bone = animator.GetBoneTransform(w.bone);
+                if (bone == null) continue;
+
+                var weapon = Instantiate(w.prefab, bone);
+                weapon.transform.localPosition = Vector3.zero;
+                weapon.transform.localRotation = Quaternion.identity;
+                weapon.transform.localScale = Vector3.one;
+                SetLayerRecursive(weapon, PREVIEW_LAYER);
+
+                Vector3 baseScale = w.localScale == Vector3.zero ? Vector3.one : w.localScale;
+
+                if (w.autoFitLength > 0f)
+                {
+                    Physics.SyncTransforms();
+                    float longest = MeasureWeaponLongestWorldDimension(weapon);
+                    if (longest > 0.0001f)
+                    {
+                        float factor = w.autoFitLength / longest;
+                        weapon.transform.localScale = baseScale * factor;
+                    }
+                    else
+                    {
+                        weapon.transform.localScale = baseScale;
+                    }
+                }
+                else
+                {
+                    weapon.transform.localScale = baseScale;
+                }
+
+                // Auto-align rotation: orient the weapon's primary (longest) axis along the
+                // current wrist-forward direction, so it follows whatever pose the idle clip
+                // has placed the hand in. The user-supplied localPosition/localEulerAngles
+                // are then applied additively as fine-tune offsets.
+                AutoAlignWeaponInHand(weapon, animator, w.bone);
+
+                weapon.transform.localPosition += w.localPosition;
+                weapon.transform.localRotation = weapon.transform.localRotation * Quaternion.Euler(w.localEulerAngles);
+            }
+        }
+
+        static void AutoAlignWeaponInHand(GameObject weapon, Animator animator, HumanBodyBones handBone)
+        {
+            var hand = animator.GetBoneTransform(handBone);
+            if (hand == null) return;
+
+            bool isLeft = handBone == HumanBodyBones.LeftHand;
+            var lowerArm = animator.GetBoneTransform(isLeft ? HumanBodyBones.LeftLowerArm : HumanBodyBones.RightLowerArm);
+            if (lowerArm == null) return;
+
+            // The direction the wrist is "pointing" — from forearm toward hand. For both
+            // sword and gun grips this is roughly where the blade/barrel should extend.
+            Vector3 wristForwardWorld = (hand.position - lowerArm.position).normalized;
+            Vector3 wristForwardLocal = hand.InverseTransformDirection(wristForwardWorld).normalized;
+            if (wristForwardLocal.sqrMagnitude < 1e-6f) return;
+
+            if (!TryComputeWeaponLocalBounds(weapon, out Bounds bounds)) return;
+
+            // Pick the longest local axis as the weapon's "primary" direction. Sign it by
+            // which side of origin the bounds sit on — that's the direction the blade/barrel
+            // extends (assuming the FBX pivot is at or near the grip).
+            Vector3 size = bounds.size;
+            Vector3 c = bounds.center;
+            Vector3 primaryAxisLocal;
+            if (size.x >= size.y && size.x >= size.z)
+                primaryAxisLocal = new Vector3(c.x >= 0f ? 1f : -1f, 0f, 0f);
+            else if (size.y >= size.z)
+                primaryAxisLocal = new Vector3(0f, c.y >= 0f ? 1f : -1f, 0f);
+            else
+                primaryAxisLocal = new Vector3(0f, 0f, c.z >= 0f ? 1f : -1f);
+
+            weapon.transform.localRotation = Quaternion.FromToRotation(primaryAxisLocal, wristForwardLocal);
+        }
+
+        static bool TryComputeWeaponLocalBounds(GameObject weapon, out Bounds bounds)
+        {
+            bounds = default;
+            bool init = false;
+            Matrix4x4 wToL = weapon.transform.worldToLocalMatrix;
+
+            foreach (var mf in weapon.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf == null || mf.sharedMesh == null) continue;
+                var local = TransformBounds(mf.sharedMesh.bounds, wToL * mf.transform.localToWorldMatrix);
+                if (!init) { bounds = local; init = true; }
+                else { bounds.Encapsulate(local); }
+            }
+            foreach (var smr in weapon.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (smr == null || smr.sharedMesh == null) continue;
+                var local = TransformBounds(smr.sharedMesh.bounds, wToL * smr.transform.localToWorldMatrix);
+                if (!init) { bounds = local; init = true; }
+                else { bounds.Encapsulate(local); }
+            }
+            return init;
+        }
+
+        static Bounds TransformBounds(Bounds b, Matrix4x4 m)
+        {
+            Vector3 newCenter = m.MultiplyPoint3x4(b.center);
+            Vector3 e = b.extents;
+            Vector3 newExtents = new Vector3(
+                Mathf.Abs(m.m00) * e.x + Mathf.Abs(m.m01) * e.y + Mathf.Abs(m.m02) * e.z,
+                Mathf.Abs(m.m10) * e.x + Mathf.Abs(m.m11) * e.y + Mathf.Abs(m.m12) * e.z,
+                Mathf.Abs(m.m20) * e.x + Mathf.Abs(m.m21) * e.y + Mathf.Abs(m.m22) * e.z);
+            return new Bounds(newCenter, newExtents * 2f);
+        }
+
+        static float MeasureWeaponLongestWorldDimension(GameObject weapon)
+        {
+            Vector3 min = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            Vector3 max = new Vector3(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity);
+            bool any = false;
+
+            foreach (var mf in weapon.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf == null || mf.sharedMesh == null) continue;
+                var b = mf.sharedMesh.bounds;
+                AccumulateMeshCorners(mf.transform, b, ref min, ref max);
+                any = true;
+            }
+            foreach (var smr in weapon.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (smr == null || smr.sharedMesh == null) continue;
+                var b = smr.sharedMesh.bounds;
+                AccumulateMeshCorners(smr.transform, b, ref min, ref max);
+                any = true;
+            }
+            if (!any) return 0f;
+            Vector3 size = max - min;
+            return Mathf.Max(size.x, size.y, size.z);
+        }
+
+        static void AccumulateMeshCorners(Transform t, Bounds b, ref Vector3 min, ref Vector3 max)
+        {
+            Vector3 c = b.center;
+            Vector3 e = b.extents;
+            for (int sx = -1; sx <= 1; sx += 2)
+            for (int sy = -1; sy <= 1; sy += 2)
+            for (int sz = -1; sz <= 1; sz += 2)
+            {
+                Vector3 corner = c + new Vector3(sx * e.x, sy * e.y, sz * e.z);
+                Vector3 world = t.TransformPoint(corner);
+                min = Vector3.Min(min, world);
+                max = Vector3.Max(max, world);
             }
         }
 
