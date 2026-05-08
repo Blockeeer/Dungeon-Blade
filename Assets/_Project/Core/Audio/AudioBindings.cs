@@ -35,6 +35,11 @@ namespace DungeonBlade.Core.Audio
         [Range(0f, 0.3f)]
         [SerializeField] float pitchVariation = 0.08f;
 
+        [Tooltip("Window after an attack press during which a hit can suppress the miss whoosh. Slightly longer than the sword's hit-frame delay.")]
+        [SerializeField] float attackHitWindow = 0.30f;
+
+        float _pendingSwingExpiresAt = -1f;
+
         void OnEnable()
         {
             if (playerStats != null)
@@ -111,9 +116,34 @@ namespace DungeonBlade.Core.Audio
             if (_hookedWeapon == w) _hookedWeapon = null;
         }
 
-        void OnAttackPerformed() => SfxPool.TryPlay(swordSwing, 0.8f, pitchVariation);
-        void OnSwordHit(int comboIndex, float damage) => SfxPool.TryPlay(swordHit, 1f, pitchVariation);
-        void OnGunHit() => SfxPool.TryPlay(swordHit, 1f, pitchVariation);
+        void OnAttackPerformed()
+        {
+            // Don't play the whoosh immediately. Mark a pending swing — if a
+            // hit fires within the window the swing is suppressed (the hit
+            // sound replaces it). Otherwise Update plays the whoosh on expiry.
+            _pendingSwingExpiresAt = Time.time + attackHitWindow;
+        }
+
+        void OnSwordHit(int comboIndex, float damage)
+        {
+            _pendingSwingExpiresAt = -1f;  // hit landed → no whoosh
+            SfxPool.TryPlay(swordHit, 1f, pitchVariation);
+        }
+
+        void OnGunHit()
+        {
+            _pendingSwingExpiresAt = -1f;
+            SfxPool.TryPlay(swordHit, 1f, pitchVariation);
+        }
+
+        void Update()
+        {
+            if (_pendingSwingExpiresAt > 0f && Time.time >= _pendingSwingExpiresAt)
+            {
+                _pendingSwingExpiresAt = -1f;
+                SfxPool.TryPlay(swordSwing, 0.8f, pitchVariation);
+            }
+        }
 
         void OnPlayerDamaged(float amount) => SfxPool.TryPlay(playerDamaged, 1f, pitchVariation);
         void OnPlayerDeath() => SfxPool.TryPlay(playerDeath, 1f);

@@ -129,6 +129,10 @@ namespace DungeonBlade.UI.Menus
         void SaveAndLoad(string sceneName)
         {
             Time.timeScale = 1f;
+            // MenuState is static and survives scene unloads. If we leave it
+            // pushed (because the pause panel was open when this fired), the
+            // next scene loads with input gated and the player looks frozen.
+            MenuState.Reset();
             if (persistence != null) persistence.SaveNow();
             if (FadeLoader.Instance != null) FadeLoader.Instance.LoadScene(sceneName);
             else SceneLoader.Load(sceneName);
@@ -137,6 +141,7 @@ namespace DungeonBlade.UI.Menus
         void QuitToDesktop()
         {
             Time.timeScale = 1f;
+            MenuState.Reset();
             if (persistence != null) persistence.SaveNow();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;

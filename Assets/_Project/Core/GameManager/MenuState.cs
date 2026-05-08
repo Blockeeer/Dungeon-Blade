@@ -1,4 +1,6 @@
 using System;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DungeonBlade.Core
 {
@@ -27,6 +29,15 @@ namespace DungeonBlade.Core
         {
             _openCount = 0;
             OnAnyMenuChanged?.Invoke(false);
+        }
+
+        // Static counter survives scene unloads. Auto-clear on every load so
+        // a menu open during a scene transition doesn't gate input in the
+        // newly-loaded scene.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void RegisterAutoReset()
+        {
+            SceneManager.sceneLoaded += (_, __) => Reset();
         }
     }
 }
