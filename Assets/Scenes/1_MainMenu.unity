@@ -822,29 +822,35 @@ MonoBehaviour:
   titleLabel: {fileID: 0}
   heroModels:
   - id: lyra
-    prefab: {fileID: 919132149155446097, guid: 643886bd88e26fa4a9e20b16d7487f96, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+    prefab: {fileID: 919132149155446097, guid: 1f9903079e77d6d49beb44967d553350, type: 3}
+    previewClip: {fileID: -4791504522942941401, guid: 1f9903079e77d6d49beb44967d553350,
       type: 3}
+    weapons: []
   - id: mira
-    prefab: {fileID: 919132149155446097, guid: 548096f7c25d19b45b4f5c3396401170, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+    prefab: {fileID: 919132149155446097, guid: 1be535025cd983342a354626a4599721, type: 3}
+    previewClip: {fileID: 6165553400957861818, guid: 1be535025cd983342a354626a4599721,
       type: 3}
+    weapons: []
   - id: aurelia
-    prefab: {fileID: 919132149155446097, guid: f95f82db684db82458aaed4a7b7106f7, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+    prefab: {fileID: 919132149155446097, guid: cd856c53d55b8054ea51d64d002b2311, type: 3}
+    previewClip: {fileID: -4791504522942941401, guid: cd856c53d55b8054ea51d64d002b2311,
       type: 3}
+    weapons: []
   - id: kaelen
-    prefab: {fileID: 919132149155446097, guid: 3353a4eb58a6ed74a99e141bafc10ccc, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+    prefab: {fileID: 919132149155446097, guid: b3dfc1da04e9c0f478a9ea95428fdcf7, type: 3}
+    previewClip: {fileID: -4791504522942941401, guid: b3dfc1da04e9c0f478a9ea95428fdcf7,
       type: 3}
+    weapons: []
   - id: wayne
-    prefab: {fileID: 919132149155446097, guid: 42fadf533f0db2c41981da1b5a78ece3, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: c0a4df9460728ee41b9e78a47ce39679,
+    prefab: {fileID: 919132149155446097, guid: ed5c731912f44b84baaedd01522bbdd1, type: 3}
+    previewClip: {fileID: -4791504522942941401, guid: ed5c731912f44b84baaedd01522bbdd1,
       type: 3}
+    weapons: []
   - id: varion
-    prefab: {fileID: 919132149155446097, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
-    previewClip: {fileID: -203655887218126122, guid: 1558ee94e70fe484db91102dce1d064f,
+    prefab: {fileID: 919132149155446097, guid: 85631a82df502614193b83d3c8f8a516, type: 3}
+    previewClip: {fileID: -4791504522942941401, guid: 85631a82df502614193b83d3c8f8a516,
       type: 3}
+    weapons: []
   heroIdleClip: {fileID: -203655887218126122, guid: 6322c0e1c6780774db49439065d69b0a,
     type: 3}
   heroAvatar: {fileID: 9000000, guid: 789f5e8688e7de94dafc35ee2415d657, type: 3}
@@ -1906,9 +1912,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90caf58da116d10488b4c5be0d43eda5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mixer: {fileID: 24100000, guid: 6009fb6f81d9aa340b763f194fb28c3d, type: 2}
-  musicVolumeParam: MusicVolume
-  sfxVolumeParam: SfxVolume
 --- !u!4 &1301208166
 Transform:
   m_ObjectHideFlags: 0
@@ -2260,54 +2263,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1609629916}
   m_CullTransparentMesh: 1
---- !u!1 &1713818797
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1713818799}
-  - component: {fileID: 1713818798}
-  m_Layer: 0
-  m_Name: Music
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1713818798
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1713818797}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd7380fcff5ec294fa0a62d0d182fbb4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  track: {fileID: 0}
-  volume: 0.6
-  playOnSceneLoadOnly: 1
-  arenaTrack: {fileID: 0}
---- !u!4 &1713818799
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1713818797}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.406169, y: 13.22925, z: 46.82202}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1874601313
 GameObject:
   m_ObjectHideFlags: 0
@@ -2833,4 +2788,3 @@ SceneRoots:
   - {fileID: 477842287}
   - {fileID: 134627323}
   - {fileID: 1301208166}
-  - {fileID: 1713818799}

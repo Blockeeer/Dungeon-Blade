@@ -52,7 +52,7 @@ namespace DungeonBlade.UI.Menus
 
             var camGO = new GameObject("PreviewCamera");
             camGO.transform.SetParent(transform, false);
-            camGO.transform.localPosition = new Vector3(0f, 0.95f, -3.4f);
+            camGO.transform.localPosition = new Vector3(0f, 0.9f, -3.3f);
             camGO.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
             _camera = camGO.AddComponent<Camera>();
             _camera.targetTexture = RT;
