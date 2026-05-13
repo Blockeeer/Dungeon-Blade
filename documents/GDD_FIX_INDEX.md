@@ -13,7 +13,7 @@ Sequential GDD-compliance work, broken into 4 self-contained tiers. Do them in o
 | **Tier 1** | Numeric data alignment (HP, EXP, levels, checkpoints) | ~15 min | ✅ **Done** |
 | **Tier 2** | HUD layout rebuild per §11.1 | ~2-3 hr | ✅ **Done** |
 | **Tier 3** | Structural deviations (equipment slots, hotbar, inventory key) | ~3-4 hr | ✅ **Done** (lightweight path — deviations documented) |
-| **Tier 4** | Boss reward table + late-stage features | ~3-4 hr | 🟡 **Partial** — §2/§3/§4 code done; §1 (Boss Reward Table) deferred |
+| **Tier 4** | Boss reward table + late-stage features | ~3-4 hr | ✅ **Substantially done** — §1 boss table aligned to GDD §6.2 with `WarlordsBladeFirstKill` gate; Uncommon/Epic items deferred (no items at those tiers yet) |
 
 ---
 

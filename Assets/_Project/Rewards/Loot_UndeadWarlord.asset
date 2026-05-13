@@ -11,20 +11,33 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b8bb9cd124e97a54b9142bae547e01cf, type: 3}
   m_Name: Loot_UndeadWarlord
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   rolls:
-  - Item: {fileID: 11400000, guid: 1934422b53ba5ea468832886a1e03ea6, type: 2}
-    DropChance: 0.5
-    MinQuantity: 1
-    MaxQuantity: 1
-  - Item: {fileID: 11400000, guid: f5d2e14ffc79c4a43ab023483baf33bc, type: 2}
-    DropChance: 0.5
-    MinQuantity: 1
-    MaxQuantity: 1
-  - Item: {fileID: 11400000, guid: 11159ab81d3013a4f998cbc52d319e25, type: 2}
+  - Item: {fileID: 11400000, guid: 06a7de6ad3f3cbc43b03090789e9fc31, type: 2}
     DropChance: 1
-    MinQuantity: 3
-    MaxQuantity: 3
-  minGold: 200
-  maxGold: 400
+    MinQuantity: 1
+    MaxQuantity: 1
+    Gate: 0
+  - Item: {fileID: 11400000, guid: 4b8fb8ae4b97e324987535669619f634, type: 2}
+    DropChance: 0.7
+    MinQuantity: 1
+    MaxQuantity: 1
+    Gate: 0
+  - Item: {fileID: 11400000, guid: 2967186ca3640774d82914c03c4e90ec, type: 2}
+    DropChance: 0.7
+    MinQuantity: 1
+    MaxQuantity: 1
+    Gate: 0
+  - Item: {fileID: 11400000, guid: c35a4c329971ce044867e0f290fdaeb7, type: 2}
+    DropChance: 0.05
+    MinQuantity: 1
+    MaxQuantity: 1
+    Gate: 1
+  - Item: {fileID: 11400000, guid: d0ec834b706cd794d91259c6b55aae49, type: 2}
+    DropChance: 1
+    MinQuantity: 1
+    MaxQuantity: 1
+    Gate: 0
+  minGold: 150
+  maxGold: 300
   experience: 300

@@ -147,14 +147,20 @@ See [ITEM_RARITY_SETUP.md](ITEM_RARITY_SETUP.md).
 
 | GDD Roll | Reward | Current | Status |
 |---|---|---|---|
-| Guaranteed | Gold 150-300 | 🟡 Verify boss LootTable | 🟡 |
-| Guaranteed | Uncommon or Rare item | 🟡 Boss table likely simpler | 🟡 |
-| 70% chance | Rare item | 🟡 verify | 🟡 |
-| 30% chance | Epic item | 🟡 verify (Epic items don't exist yet) | 🟡 |
-| 5% chance | Legendary: Warlord's Blade (first kill only) | ⏳ "First kill only" flag not implemented | ⏳ |
-| 100% | Dungeon Clear Token | ⏳ Token system not implemented | ⏳ |
+| Guaranteed | Gold 150-300 | Loot_UndeadWarlord minGold=150, maxGold=300 | ✅ |
+| Guaranteed | Uncommon or Rare item | Item_DualDemonSword (Rare) at 100% — Uncommon tier deferred | 🟡 |
+| 70% chance | Rare item | Item_FuturisticRifle + Item_PistolBlue, each at 70% | ✅ |
+| 30% chance | Epic item | 🟡 No Epic items exist yet — Epic roll silently skipped | 🟡 |
+| 5% chance | Legendary: Warlord's Blade (first kill only) | Item_WarlordsBlade at 5% with LootRollGate.WarlordsBladeFirstKill | ✅ |
+| 100% | Dungeon Clear Token | Item_DungeonClearToken at 100% | ✅ |
 
-**Verdict:** Boss loot table needs reauthoring to match GDD percentages. Token system is a separate Phase 1 task.
+**Verdict:** Boss reward table substantially GDD-aligned. Remaining gaps:
+- Uncommon items (no items at this tier yet — defer)
+- Epic items (no items at this tier yet — defer)
+
+PlayerProfile gained `warlordsBladeDropped` flag. LootTable.RollItems checks the profile's flag via `LootRollGate.WarlordsBladeFirstKill` — first successful roll sets the flag + auto-saves, blocking future Legendary drops per GDD §6.2.
+
+Token Exchange UI at the Bank is explicitly Phase 2 per GDD §8.2.
 
 ---
 
