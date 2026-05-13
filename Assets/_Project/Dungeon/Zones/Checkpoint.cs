@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace DungeonBlade.Dungeon
@@ -16,6 +17,10 @@ namespace DungeonBlade.Dungeon
 
         public bool Activated { get; private set; }
 
+        // Static event so audio / UI can listen without per-instance wiring
+        // (any newly-activated checkpoint anywhere fires this).
+        public static event Action<Checkpoint> AnyCheckpointActivated;
+
         void Reset()
         {
             var col = GetComponent<Collider>();
@@ -31,6 +36,7 @@ namespace DungeonBlade.Dungeon
 
             Activated = true;
             respawn.RegisterCheckpoint(this);
+            AnyCheckpointActivated?.Invoke(this);
         }
 
         void OnDrawGizmos()

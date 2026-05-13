@@ -1290,6 +1290,16 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 271359502}
     m_Modifications:
+    - target: {fileID: 235044240555048708, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3137817188912930513, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 419.7
+      objectReference: {fileID: 0}
     - target: {fileID: 3864760698225772200, guid: 6ef69a6889cd4714ca1b3440713c4f10,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -2535,6 +2545,7 @@ MonoBehaviour:
   startingWeaponIndex: 0
   comboSystem: {fileID: 635901432}
   crosshair: {fileID: 0}
+  movement: {fileID: 0}
 --- !u!114 &635901432
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5056,6 +5067,9 @@ MonoBehaviour:
   heavyActive: 0.18
   heavyRecovery: 0.45
   heavyKnockback: 6
+  dashAttackDamageMult: 1.4
+  dashAttackKnockbackMult: 1.5
+  dashAttackWindup: 0.06
   hitOrigin: {fileID: 1082568776}
   hitRadius: 1.2
   hitForwardOffset: 1

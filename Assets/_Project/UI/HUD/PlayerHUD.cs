@@ -1,3 +1,4 @@
+using System.Collections;
 using DungeonBlade.Bank;
 using DungeonBlade.Player;
 using DungeonBlade.Rewards;
@@ -15,6 +16,12 @@ namespace DungeonBlade.UI.HUD
         [Header("Health")]
         [SerializeField] Image healthFill;
         [SerializeField] TMP_Text healthText;
+        [Tooltip("GDD §11.1 — HP bar flashes red below this threshold (0.25 = 25%).")]
+        [Range(0f, 1f)]
+        [SerializeField] float lowHealthThreshold = 0.25f;
+        [SerializeField] Color healthBaseColor = new Color(0.86f, 0.16f, 0.16f, 1f);
+        [SerializeField] Color healthFlashColor = new Color(1f, 0.60f, 0.60f, 1f);
+        [SerializeField] float lowHealthFlashPeriod = 0.5f;
 
         [Header("Stamina")]
         [SerializeField] Image staminaFill;
@@ -30,6 +37,7 @@ namespace DungeonBlade.UI.HUD
 
         ExperienceSystem _exp;
         PlayerWallet _wallet;
+        Coroutine _lowHealthFlash;
 
         void OnEnable()
         {
@@ -108,8 +116,46 @@ namespace DungeonBlade.UI.HUD
 
         void OnHealthChanged(float current, float max)
         {
-            if (healthFill != null) healthFill.fillAmount = max > 0f ? Mathf.Clamp01(current / max) : 0f;
+            float pct = max > 0f ? Mathf.Clamp01(current / max) : 0f;
+            if (healthFill != null) healthFill.fillAmount = pct;
             if (healthText != null) healthText.text = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+            UpdateLowHealthFlash(pct);
+        }
+
+        // GDD §11.1 — flash the HP bar fill between base + flash colors while
+        // HP is below the low-health threshold. Stops when HP rises above the
+        // threshold OR reaches zero (dead — no point flashing a death bar).
+        void UpdateLowHealthFlash(float pct)
+        {
+            bool shouldFlash = pct > 0f && pct < lowHealthThreshold;
+            if (shouldFlash)
+            {
+                if (_lowHealthFlash == null && gameObject.activeInHierarchy)
+                    _lowHealthFlash = StartCoroutine(LowHealthFlashRoutine());
+            }
+            else
+            {
+                if (_lowHealthFlash != null)
+                {
+                    StopCoroutine(_lowHealthFlash);
+                    _lowHealthFlash = null;
+                }
+                if (healthFill != null) healthFill.color = healthBaseColor;
+            }
+        }
+
+        IEnumerator LowHealthFlashRoutine()
+        {
+            if (healthFill == null) yield break;
+            float t = 0f;
+            while (true)
+            {
+                t += Time.unscaledDeltaTime;
+                // Sin-wave alpha between base color and flash color, full period = lowHealthFlashPeriod.
+                float k = 0.5f * (1f + Mathf.Sin(t * Mathf.PI * 2f / lowHealthFlashPeriod));
+                healthFill.color = Color.Lerp(healthBaseColor, healthFlashColor, k);
+                yield return null;
+            }
         }
 
         void OnStaminaChanged(float current, float max)
@@ -127,10 +173,8 @@ namespace DungeonBlade.UI.HUD
         void OnExperienceChanged(int current, int needed)
         {
             float pct = needed > 0 ? Mathf.Clamp01((float)current / needed) : 0f;
-            Debug.Log($"[HUD] OnExperienceChanged: {current}/{needed} = {pct:F2}. experienceFill={experienceFill}, fillAmount before={experienceFill?.fillAmount}");
             if (experienceFill != null) experienceFill.fillAmount = pct;
             if (experienceText != null) experienceText.text = $"{current} / {needed} XP";
-            Debug.Log($"[HUD] fillAmount after={experienceFill?.fillAmount}");
         }
 
         void OnGoldChanged(int gold)

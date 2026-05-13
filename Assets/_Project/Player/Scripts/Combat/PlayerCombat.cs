@@ -11,6 +11,8 @@ namespace DungeonBlade.Player
         [SerializeField] int startingWeaponIndex = 0;
         [SerializeField] ComboSystem comboSystem;
         [SerializeField] GameObject crosshair;
+        [Tooltip("Optional. If wired, pressing Fire while the player is dashing triggers a Dash Attack on the equipped Sword.")]
+        [SerializeField] PlayerMovement movement;
 
         PlayerInputActions _input;
         WeaponBase _active;
@@ -65,7 +67,16 @@ namespace DungeonBlade.Player
 
             if (_input.Fire.WasPressedThisFrame())
             {
-                if (_active is Sword s && _input.AimOrBlock.IsPressed())
+                bool isDashing = movement != null && movement.IsDashing;
+                if (_active is Sword sw && isDashing)
+                {
+                    // GDD §2.2: dash-attack — dash into enemy + Fire = lunging
+                    // heavy. Skips the charge-hold requirement; Sword applies
+                    // damage/knockback multipliers.
+                    sw.StartDashAttack();
+                    HeavyAttackPerformed?.Invoke();
+                }
+                else if (_active is Sword s && _input.AimOrBlock.IsPressed())
                 {
                     s.StartHeavyHold();
                     HeavyAttackPerformed?.Invoke();

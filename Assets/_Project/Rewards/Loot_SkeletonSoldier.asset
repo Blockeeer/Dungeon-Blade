@@ -19,4 +19,4 @@ MonoBehaviour:
     MaxQuantity: 1
   minGold: 5
   maxGold: 15
-  experience: 25
+  experience: 15

@@ -1,13 +1,16 @@
+using DungeonBlade.Bank;
+using DungeonBlade.Boss;
 using DungeonBlade.Combat;
+using DungeonBlade.Dungeon;
 using DungeonBlade.Inventory;
 using DungeonBlade.Player;
 using UnityEngine;
 
 namespace DungeonBlade.Core.Audio
 {
-    // Tier 1 audio event subscriber. Drop one of these into a scene, wire the
-    // clip slots and Player references in the Inspector, and the matching
-    // sounds play on each event. No gameplay code is modified.
+    // Tier 1-4 audio event subscriber. Drop one of these into a scene, wire the
+    // clip slots and Player/Boss/Wallet references in the Inspector, and the
+    // matching sounds play on each event. No gameplay code is modified.
     public class AudioBindings : MonoBehaviour
     {
         [Header("Player references")]
@@ -15,12 +18,18 @@ namespace DungeonBlade.Core.Audio
         [SerializeField] PlayerMovement playerMovement;
         [SerializeField] PlayerCombat playerCombat;
         [SerializeField] InventoryManager inventory;
+        [Tooltip("Optional. If wired, plays boss roar on phase transitions per GDD §12.")]
+        [SerializeField] BossBase boss;
+        [Tooltip("Optional. If wired, plays gold pickup sound on PlayerWallet.OnGoldChanged (only when gold increases).")]
+        [SerializeField] PlayerWallet wallet;
 
         [Header("Combat SFX")]
         [SerializeField] AudioClip swordSwing;
         [SerializeField] AudioClip swordHit;
         [SerializeField] AudioClip playerDamaged;
         [SerializeField] AudioClip playerDeath;
+        [Tooltip("GDD §12 — distinct sound when an attack is parried (different from a normal hit).")]
+        [SerializeField] AudioClip swordParry;
 
         [Header("Movement SFX")]
         [SerializeField] AudioClip dashWhoosh;
@@ -29,6 +38,14 @@ namespace DungeonBlade.Core.Audio
         [Header("UI / Pickup SFX")]
         [SerializeField] AudioClip itemPickup;
         [SerializeField] AudioClip uiClick;
+        [Tooltip("GDD §12 — coin chime, separate from generic item pickup.")]
+        [SerializeField] AudioClip goldPickup;
+        [Tooltip("GDD §12 — chime when a new checkpoint activates.")]
+        [SerializeField] AudioClip checkpointReached;
+
+        [Header("Boss SFX")]
+        [Tooltip("GDD §12 — boss roar at phase transitions. Plays on Phase2 and Phase3 entry.")]
+        [SerializeField] AudioClip bossRoar;
 
         [Header("Tuning")]
         [Tooltip("Random pitch variation to keep repeated SFX from sounding identical (0 = none, 0.1 = ±10%)")]
@@ -65,6 +82,44 @@ namespace DungeonBlade.Core.Audio
             {
                 inventory.OnInventoryChanged += OnInventoryChanged;
             }
+            // Fall back to FindObjectOfType so boss roar works even if the
+            // Boss field wasn't wired (one boss per scene by design).
+            if (boss == null) boss = FindObjectOfType<BossBase>();
+            if (boss != null) boss.OnPhaseChanged += OnBossPhaseChanged;
+
+            // Prefer the Inspector reference, fall back to the singleton so
+            // the gold sound works even if the Wallet field wasn't wired.
+            if (wallet == null) wallet = PlayerWallet.Instance;
+            if (wallet != null)
+            {
+                wallet.OnGoldChanged += OnGoldChanged;
+                _lastGold = wallet.Gold;
+            }
+            if (playerStats != null)
+            {
+                // Parry event fires when an incoming attack is fully absorbed
+                // during the parry window. PlayerStats.OnParry exposed below.
+                playerStats.OnParry += OnParry;
+            }
+            // Static event — fires for any Checkpoint activation in any scene.
+            Checkpoint.AnyCheckpointActivated += OnCheckpointActivated;
+        }
+
+        // Some references (Boss, PlayerWallet) may not have Awake'd yet when
+        // OnEnable runs. Start() runs after all Awakes — retry late subscriptions.
+        void Start()
+        {
+            if (wallet == null && PlayerWallet.Instance != null)
+            {
+                wallet = PlayerWallet.Instance;
+                wallet.OnGoldChanged += OnGoldChanged;
+                _lastGold = wallet.Gold;
+            }
+            if (boss == null)
+            {
+                boss = FindObjectOfType<BossBase>();
+                if (boss != null) boss.OnPhaseChanged += OnBossPhaseChanged;
+            }
         }
 
         void OnDisable()
@@ -73,6 +128,7 @@ namespace DungeonBlade.Core.Audio
             {
                 playerStats.OnDamaged -= OnPlayerDamaged;
                 playerStats.OnDeath -= OnPlayerDeath;
+                playerStats.OnParry -= OnParry;
             }
             if (playerMovement != null)
             {
@@ -90,7 +146,20 @@ namespace DungeonBlade.Core.Audio
             {
                 inventory.OnInventoryChanged -= OnInventoryChanged;
             }
+            if (boss != null)
+            {
+                boss.OnPhaseChanged -= OnBossPhaseChanged;
+            }
+            if (wallet != null)
+            {
+                wallet.OnGoldChanged -= OnGoldChanged;
+            }
+            Checkpoint.AnyCheckpointActivated -= OnCheckpointActivated;
         }
+
+        int _lastGold;
+
+        void OnCheckpointActivated(Checkpoint cp) => SfxPool.TryPlay(checkpointReached, 0.8f);
 
         WeaponBase _hookedWeapon;
 
@@ -150,6 +219,29 @@ namespace DungeonBlade.Core.Audio
         void OnDash() => SfxPool.TryPlay(dashWhoosh, 0.7f, pitchVariation);
         void OnJump() => SfxPool.TryPlay(jumpGrunt, 0.6f, pitchVariation);
         void OnInventoryChanged() => SfxPool.TryPlay(itemPickup, 0.7f, pitchVariation);
+        void OnParry() => SfxPool.TryPlay(swordParry, 1f, pitchVariation);
+
+        void OnBossPhaseChanged(BossPhase phase)
+        {
+            // Roar on the two threshold transitions only — not on Phase1 entry
+            // (which is silent / just the fight starting) or Dead.
+            if (phase == BossPhase.Phase2 || phase == BossPhase.Phase3)
+            {
+                SfxPool.TryPlay(bossRoar, 1f);
+            }
+        }
+
+        void OnGoldChanged(int newGold)
+        {
+            // Only play coin chime on gain, not on spend.
+            if (newGold > _lastGold) SfxPool.TryPlay(goldPickup, 0.7f, pitchVariation);
+            _lastGold = newGold;
+        }
+
+        // Public method called from Checkpoint when a new one activates.
+        // Subscribing to a per-Checkpoint event would require a Checkpoint
+        // event change; calling this method directly is simpler.
+        public void PlayCheckpointReached() => SfxPool.TryPlay(checkpointReached, 0.8f);
 
         // Combat hooks — call these from PlayerCombat via UnityEvents in the
         // Inspector OR via animation events when animations are wired (M9.5).

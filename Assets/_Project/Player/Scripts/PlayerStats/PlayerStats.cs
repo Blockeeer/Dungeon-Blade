@@ -25,6 +25,7 @@ namespace DungeonBlade.Player
                 if (sword.IsParryActive)
                 {
                     Debug.Log($"[Player] Parried {info.Type} attack from {info.Source?.name}");
+                    OnParry?.Invoke();
                     return;
                 }
                 amount *= 1f - sword.BlockDamageReduction;
@@ -58,6 +59,9 @@ namespace DungeonBlade.Player
         // The float is the damage amount that landed; bridge uses it to decide
         // between a small Hit react and a Big Hit react.
         public event Action<float> OnDamaged;
+        // Fires when an attack is fully absorbed during the parry window.
+        // AudioBindings subscribes to play the metallic clang SFX (GDD §12).
+        public event Action OnParry;
 
         float _lastDamageTime = -999f;
         float _lastStaminaUseTime = -999f;
