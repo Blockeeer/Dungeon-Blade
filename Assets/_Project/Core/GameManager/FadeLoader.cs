@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -12,6 +13,9 @@ namespace DungeonBlade.Core
         [SerializeField] CanvasGroup fadeGroup;
         [SerializeField] Image fadeImage;
         [SerializeField] float defaultFadeDuration = 0.4f;
+        [SerializeField, Tooltip("Optional label shown while a scene loads. If null, one is built automatically into the fade canvas.")]
+        TMP_Text loadingLabel;
+        [SerializeField] string loadingText = "Loading...";
 
         bool _busy;
 
@@ -22,6 +26,8 @@ namespace DungeonBlade.Core
             DontDestroyOnLoad(gameObject);
             if (fadeGroup != null) fadeGroup.alpha = 0f;
             if (fadeImage != null) fadeImage.raycastTarget = false;
+            EnsureLoadingLabel();
+            SetLoadingVisible(false);
         }
 
         public void LoadScene(string sceneName, float fadeDuration = -1f)
@@ -36,12 +42,16 @@ namespace DungeonBlade.Core
             _busy = true;
             yield return Fade(0f, 1f, dur);
 
+            SetLoadingVisible(true);
+
             var op = SceneManager.LoadSceneAsync(sceneName);
             if (op != null)
             {
                 op.allowSceneActivation = true;
                 while (!op.isDone) yield return null;
             }
+
+            SetLoadingVisible(false);
 
             yield return Fade(1f, 0f, dur);
             _busy = false;
@@ -60,6 +70,37 @@ namespace DungeonBlade.Core
             }
             fadeGroup.alpha = to;
             if (fadeImage != null) fadeImage.raycastTarget = to > 0.01f;
+        }
+
+        void SetLoadingVisible(bool visible)
+        {
+            if (loadingLabel == null) return;
+            loadingLabel.gameObject.SetActive(visible);
+            if (visible) loadingLabel.text = string.IsNullOrEmpty(loadingText) ? "Loading..." : loadingText;
+        }
+
+        void EnsureLoadingLabel()
+        {
+            if (loadingLabel != null) return;
+            if (fadeGroup == null) return;
+
+            var go = new GameObject("LoadingLabel", typeof(RectTransform));
+            go.transform.SetParent(fadeGroup.transform, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(800f, 120f);
+
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = loadingText;
+            tmp.fontSize = 56f;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = new Color(1f, 0.9f, 0.85f, 1f);
+            tmp.raycastTarget = false;
+            loadingLabel = tmp;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using DungeonBlade.Inventory.UI;
 using TMPro;
 using UnityEngine;
@@ -26,13 +27,33 @@ namespace DungeonBlade.Bank.UI
         [SerializeField] TMP_InputField depositInput;
         [SerializeField] TMP_InputField withdrawInput;
 
+        [Header("Gold formatting")]
+        [SerializeField, Tooltip("Hex color (without #) for the gold amount in the Pocket/Vault labels.")]
+        string goldColorHex = "F22E2E";
+        [SerializeField, Tooltip("Bold the gold amount in rich text.")]
+        bool boldGoldAmount = true;
+        [SerializeField, Tooltip("Clear the deposit/withdraw input after pressing the button.")]
+        bool clearInputAfterSubmit = true;
+
+        [Header("Auto skin")]
+        [SerializeField, Tooltip("Auto-add BankPanelSkin to the bank panel on enable (no Editor setup required).")]
+        bool autoAttachSkin = true;
+
         public ItemTooltip Tooltip => tooltip;
         public BankSlotWidget DraggingFromBank { get; private set; }
+        public RectTransform GridParent => gridParent;
+        public TMP_InputField DepositInput => depositInput;
+        public TMP_InputField WithdrawInput => withdrawInput;
+        public TMP_Text PocketGoldText => pocketGoldText;
+        public TMP_Text VaultGoldText => vaultGoldText;
 
         readonly List<BankSlotWidget> _slots = new List<BankSlotWidget>();
 
         void OnEnable()
         {
+            if (autoAttachSkin && GetComponent<BankPanelSkin>() == null)
+                gameObject.AddComponent<BankPanelSkin>();
+
             if (BankManager.Instance != null) BankManager.Instance.OnBankChanged += RefreshAll;
             if (BankManager.Instance != null) BankManager.Instance.OnGoldChanged += _ => RefreshGold();
             if (PlayerWallet.Instance != null) PlayerWallet.Instance.OnGoldChanged += _ => RefreshGold();
@@ -74,8 +95,15 @@ namespace DungeonBlade.Bank.UI
         {
             int pocket = PlayerWallet.Instance != null ? PlayerWallet.Instance.Gold : 0;
             int vault = BankManager.Instance != null ? BankManager.Instance.StoredGold : 0;
-            if (pocketGoldText != null) pocketGoldText.text = $"Pocket: {pocket}g";
-            if (vaultGoldText != null) vaultGoldText.text = $"Vault: {vault}g";
+            if (pocketGoldText != null) pocketGoldText.text = FormatGold("Pocket", pocket);
+            if (vaultGoldText != null) vaultGoldText.text = FormatGold("Vault", vault);
+        }
+
+        string FormatGold(string label, int amount)
+        {
+            string number = amount.ToString("N0", CultureInfo.InvariantCulture);
+            string inner = boldGoldAmount ? $"<b>{number}g</b>" : $"{number}g";
+            return $"{label}: <color=#{goldColorHex}>{inner}</color>";
         }
 
         public void OnDepositPressed()
@@ -83,6 +111,7 @@ namespace DungeonBlade.Bank.UI
             if (BankManager.Instance == null) return;
             int amount = ParseAmount(depositInput);
             BankManager.Instance.DepositGold(amount);
+            if (clearInputAfterSubmit && depositInput != null) depositInput.text = string.Empty;
         }
 
         public void OnWithdrawPressed()
@@ -90,6 +119,7 @@ namespace DungeonBlade.Bank.UI
             if (BankManager.Instance == null) return;
             int amount = ParseAmount(withdrawInput);
             BankManager.Instance.WithdrawGold(amount);
+            if (clearInputAfterSubmit && withdrawInput != null) withdrawInput.text = string.Empty;
         }
 
         public void OnClosePressed()

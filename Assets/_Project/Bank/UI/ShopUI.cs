@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using DungeonBlade.Inventory.UI;
 using TMPro;
 using UnityEngine;
@@ -18,12 +19,25 @@ namespace DungeonBlade.Bank.UI
         [Header("Tooltip (shared)")]
         [SerializeField] ItemTooltip tooltip;
 
+        [Header("Gold formatting")]
+        [SerializeField] string goldColorHex = "F22E2E";
+        [SerializeField] bool boldGoldAmount = true;
+
+        [Header("Auto skin")]
+        [SerializeField] bool autoAttachSkin = true;
+
         public ItemTooltip Tooltip => tooltip;
+        public RectTransform StockParent => stockParent;
+        public TMP_Text ShopNameText => shopNameText;
+        public TMP_Text PocketGoldText => pocketGoldText;
 
         readonly List<ShopStockEntry> _entries = new List<ShopStockEntry>();
 
         void OnEnable()
         {
+            if (autoAttachSkin && GetComponent<ShopPanelSkin>() == null)
+                gameObject.AddComponent<ShopPanelSkin>();
+
             if (ShopManager.Instance != null) ShopManager.Instance.OnShopChanged += Rebuild;
             if (PlayerWallet.Instance != null) PlayerWallet.Instance.OnGoldChanged += _ => RefreshGold();
             Rebuild();
@@ -61,7 +75,12 @@ namespace DungeonBlade.Bank.UI
         void RefreshGold()
         {
             int pocket = PlayerWallet.Instance != null ? PlayerWallet.Instance.Gold : 0;
-            if (pocketGoldText != null) pocketGoldText.text = $"Gold: {pocket}g";
+            if (pocketGoldText != null)
+            {
+                string n = pocket.ToString("N0", CultureInfo.InvariantCulture);
+                string inner = boldGoldAmount ? $"<b>{n}g</b>" : $"{n}g";
+                pocketGoldText.text = $"Gold: <color=#{goldColorHex}>{inner}</color>";
+            }
         }
 
         public void OnClosePressed()
