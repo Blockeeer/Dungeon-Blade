@@ -16,6 +16,14 @@ namespace DungeonBlade.Boss
         [SerializeField] protected float transitionDamageReduction = 0.9f;
         [SerializeField] protected Color transitionFlashColor = new Color(0.6f, 0.2f, 1f);
 
+        [Header("Death Cinematic (GDD §4.2)")]
+        [Tooltip("Seconds the boss stays in place after death before the reward chest spawns.")]
+        [SerializeField] protected float deathCinematicDuration = 2.5f;
+        [Tooltip("Optional reward chest GameObject to spawn at chestSpawnPoint after the death cinematic. Leave empty to skip chest spawn.")]
+        [SerializeField] protected GameObject rewardChestPrefab;
+        [Tooltip("Optional. Where the chest spawns. If empty, chest spawns at boss position.")]
+        [SerializeField] protected Transform chestSpawnPoint;
+
         public BossPhase Phase { get; protected set; } = BossPhase.Dormant;
         public event Action<BossPhase> OnPhaseChanged;
         public event Action<float, float> OnBossHealthChanged;
@@ -37,6 +45,23 @@ namespace DungeonBlade.Boss
             Agent.enabled = true;
             EnterPhase(BossPhase.Phase1);
             Debug.Log($"[Boss] {name} activated.");
+        }
+
+        public virtual void ResetForRetry()
+        {
+            ReapplyStats();
+            State = EnemyState.Idle;
+            Target = null;
+            Phase = BossPhase.Dormant;
+            _started = false;
+            _pendingNextPhase = BossPhase.Phase1;
+            TransitionEndTime = -1f;
+            transform.position = SpawnPosition;
+            if (Agent != null && Agent.isOnNavMesh) Agent.ResetPath();
+            Agent.enabled = false;
+            OnBossHealthChanged?.Invoke(Health, Stats.MaxHealth);
+            OnPhaseChanged?.Invoke(Phase);
+            Debug.Log($"[Boss] {name} reset for retry.");
         }
 
         public override void ApplyDamage(in DamageInfo info)
@@ -121,6 +146,33 @@ namespace DungeonBlade.Boss
         {
             Phase = BossPhase.Dead;
             OnBossDefeated?.Invoke();
+            // Disable AI immediately so the boss stays in place during the
+            // cinematic delay (NavMeshAgent → off, attacks stop via Phase=Dead).
+            if (Agent != null && Agent.enabled) Agent.isStopped = true;
+            StartCoroutine(DeathCinematicRoutine());
+        }
+
+        System.Collections.IEnumerator DeathCinematicRoutine()
+        {
+            // GDD §4.2 — wait 2-3 seconds before chest spawn so death anim
+            // plays out fully before rewards interrupt the moment.
+            float t = 0f;
+            while (t < deathCinematicDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            // Spawn the reward chest if wired. Otherwise, base.Die() still
+            // drops the regular loot table at the boss's feet.
+            if (rewardChestPrefab != null)
+            {
+                Vector3 pos = chestSpawnPoint != null ? chestSpawnPoint.position : transform.position;
+                Quaternion rot = chestSpawnPoint != null ? chestSpawnPoint.rotation : transform.rotation;
+                Instantiate(rewardChestPrefab, pos, rot);
+                Debug.Log($"[Boss] Reward chest spawned at {pos}");
+            }
+
             base.Die();
         }
 

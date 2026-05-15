@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace DungeonBlade.Core
 {
@@ -12,6 +13,11 @@ namespace DungeonBlade.Core
         const string KeySfx = "settings.sfx";
         const string KeySensitivity = "settings.sensitivity";
         const string KeyFullscreen = "settings.fullscreen";
+
+        [Header("Audio routing (optional — wire if you want bus-level control)")]
+        [SerializeField] AudioMixer mixer;
+        [SerializeField] string musicVolumeParam = "MusicVolume";
+        [SerializeField] string sfxVolumeParam = "SfxVolume";
 
         public float MasterVolume { get; private set; } = 1f;
         public float MusicVolume { get; private set; } = 1f;
@@ -70,7 +76,21 @@ namespace DungeonBlade.Core
         {
             AudioListener.volume = MasterVolume;
             Screen.fullScreen = Fullscreen;
+
+            if (mixer != null)
+            {
+                // Mixer faders are in dB. Map a 0–1 slider to roughly -80 to 0 dB.
+                // 0 slider → silent (-80 dB), 1 slider → full (0 dB), with a log curve.
+                mixer.SetFloat(musicVolumeParam, LinearToDb(MusicVolume));
+                mixer.SetFloat(sfxVolumeParam, LinearToDb(SfxVolume));
+            }
+
             OnSettingsChanged?.Invoke();
+        }
+
+        static float LinearToDb(float v)
+        {
+            return v <= 0.0001f ? -80f : Mathf.Log10(Mathf.Clamp01(v)) * 20f;
         }
     }
 }

@@ -8,7 +8,8 @@ namespace DungeonBlade.Rewards
     {
         public static ExperienceSystem Instance { get; private set; }
 
-        public const int LevelCap = 10;
+        // Per Dungeon Blade GDD §9.1 — level cap for Phase 1 is 20.
+        public const int LevelCap = 20;
         public const int BaseExpPerLevel = 100;
 
         [SerializeField] PlayerStats playerStats;

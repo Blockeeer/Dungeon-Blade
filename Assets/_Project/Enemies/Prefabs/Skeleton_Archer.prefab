@@ -145,7 +145,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats:
-    MaxHealth: 100
+    MaxHealth: 20
     ContactDamage: 10
     AttackDamage: 15
     AttackCooldown: 1.5

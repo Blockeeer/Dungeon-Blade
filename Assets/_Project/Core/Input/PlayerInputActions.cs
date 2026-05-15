@@ -54,9 +54,14 @@ namespace DungeonBlade.Core
             AimOrBlock = Map.AddAction("AimOrBlock", InputActionType.Button, "<Mouse>/rightButton");
             Reload = Map.AddAction("Reload", InputActionType.Button, "<Keyboard>/r");
             SwitchWeapon = Map.AddAction("SwitchWeapon", InputActionType.Button, "<Keyboard>/q");
+            // GDD §10.2 lists Q OR mouse wheel for weapon switch. Either scroll
+            // direction triggers — cycling order is handled by PlayerCombat.
+            SwitchWeapon.AddBinding("<Mouse>/scroll/y");
 
             Interact = Map.AddAction("Interact", InputActionType.Button, "<Keyboard>/f");
             OpenInventory = Map.AddAction("OpenInventory", InputActionType.Button, "<Keyboard>/tab");
+            // GDD §10.2 lists "I or Tab" — both must trigger.
+            OpenInventory.AddBinding("<Keyboard>/i");
             Pause = Map.AddAction("Pause", InputActionType.Button, "<Keyboard>/escape");
 
             Skill1 = Map.AddAction("Skill1", InputActionType.Button, "<Keyboard>/e");

@@ -20,6 +20,14 @@ namespace DungeonBlade.Combat
         [SerializeField] float heavyRecovery = 0.45f;
         [SerializeField] float heavyKnockback = 6f;
 
+        [Header("Dash Attack (GDD §2.2)")]
+        [Tooltip("Damage multiplier on a dash-attack vs a normal heavy.")]
+        [SerializeField] float dashAttackDamageMult = 1.4f;
+        [Tooltip("Knockback multiplier on a dash-attack.")]
+        [SerializeField] float dashAttackKnockbackMult = 1.5f;
+        [Tooltip("Skips the charge requirement so dash-attacks fire instantly.")]
+        [SerializeField] float dashAttackWindup = 0.06f;
+
         [Header("Hit Detection")]
         [SerializeField] Transform hitOrigin;
         [SerializeField] float hitRadius = 1.2f;
@@ -45,6 +53,7 @@ namespace DungeonBlade.Combat
         float _blockStartTime;
         float _heavyHoldStartTime = -1f;
         bool _queuedNextLight;
+        bool _isDashAttack;
         readonly HashSet<IDamageable> _hitThisSwing = new HashSet<IDamageable>();
 
         public System.Action<int, float> OnHit;
@@ -158,8 +167,24 @@ namespace DungeonBlade.Combat
             CurrentComboIndex = -1;
             State = SwordState.Windup;
             _phaseEndTime = Time.time + heavyWindup;
+            _isDashAttack = false;
             _hitThisSwing.Clear();
             OnSwingStart?.Invoke(99);
+        }
+
+        // Triggered by PlayerCombat when the player presses Fire while still
+        // in dash i-frames. Skips the charge-hold requirement and uses a
+        // shorter windup + boosted damage/knockback.
+        public void StartDashAttack()
+        {
+            if (State != SwordState.Idle) return;
+            CurrentComboIndex = -1;
+            State = SwordState.Windup;
+            _phaseEndTime = Time.time + dashAttackWindup;
+            _isDashAttack = true;
+            _heavyHoldStartTime = -1f;
+            _hitThisSwing.Clear();
+            OnSwingStart?.Invoke(98);
         }
 
         void EnterActive()
@@ -184,11 +209,17 @@ namespace DungeonBlade.Combat
 
             bool isHeavy = CurrentComboIndex < 0;
             float dmg = isHeavy ? heavyDamage : lightDamage[CurrentComboIndex];
+            float knockback = isHeavy ? heavyKnockback : 0f;
+            if (_isDashAttack)
+            {
+                dmg *= dashAttackDamageMult;
+                knockback *= dashAttackKnockbackMult;
+            }
 
             var template = new DamageInfo
             {
                 Amount = dmg,
-                Knockback = isHeavy ? heavyKnockback : 0f,
+                Knockback = knockback,
                 Source = transform.root.gameObject,
                 Type = DamageType.Melee,
                 IsParryable = true,

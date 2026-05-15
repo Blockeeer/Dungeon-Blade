@@ -14,5 +14,10 @@ namespace DungeonBlade.Core
         public int gold = 0;
         public List<string> ownedItemIds = new List<string>();
         public List<SerializedSlot> inventory = new List<SerializedSlot>();
+
+        // Per-account flags for loot gating. Per GDD §6.2:
+        // Warlord's Blade is a "first kill only" drop — once granted, never
+        // rolls again on subsequent boss kills.
+        public bool warlordsBladeDropped = false;
     }
 }

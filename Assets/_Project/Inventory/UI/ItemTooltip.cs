@@ -23,9 +23,17 @@ namespace DungeonBlade.Inventory.UI
         {
             if (item == null || root == null) return;
             root.gameObject.SetActive(true);
-            if (nameText != null) nameText.text = item.DisplayName;
+            if (nameText != null)
+            {
+                nameText.text = item.DisplayName;
+                nameText.color = ItemRankColors.For(item.Rank);
+            }
             if (descriptionText != null) descriptionText.text = item.Description;
-            if (typeText != null) typeText.text = $"{item.Type}{(item.EquipSlot != EquipmentSlot.None ? $" • {item.EquipSlot}" : "")}";
+            if (typeText != null)
+            {
+                string rarityTag = item.Rank == ItemRank.Common ? "" : $"  [{item.Rank}]";
+                typeText.text = $"{item.Type}{(item.EquipSlot != EquipmentSlot.None ? $" • {item.EquipSlot}" : "")}{rarityTag}";
+            }
         }
 
         public void Hide()

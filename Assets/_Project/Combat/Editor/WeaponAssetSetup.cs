@@ -45,9 +45,9 @@ namespace DungeonBlade.EditorTools
             new WeaponSpec { sourceFolder = "dual+demon+sword+3d+model-rare",   cleanName = "DualDemonSword",   rank = ItemRank.Rare,   kind = WeaponKind.Melee  },
             new WeaponSpec { sourceFolder = "futuristic+rifle+3d+model-rare",   cleanName = "FuturisticRifle",  rank = ItemRank.Rare,   kind = WeaponKind.Ranged },
             new WeaponSpec { sourceFolder = "pistol-blue-rare",                 cleanName = "PistolBlue",       rank = ItemRank.Rare,   kind = WeaponKind.Ranged },
-            new WeaponSpec { sourceFolder = "ice+katana+3d+model-legend",       cleanName = "IceKatana",        rank = ItemRank.Legend, kind = WeaponKind.Melee  },
-            new WeaponSpec { sourceFolder = "fantasy+gun+3d+model-legend",      cleanName = "FantasyGun",       rank = ItemRank.Legend, kind = WeaponKind.Ranged },
-            new WeaponSpec { sourceFolder = "fantasy+pistol+3d+model-legend",   cleanName = "FantasyPistol",    rank = ItemRank.Legend, kind = WeaponKind.Ranged },
+            new WeaponSpec { sourceFolder = "ice+katana+3d+model-legend",       cleanName = "IceKatana",        rank = ItemRank.Legendary, kind = WeaponKind.Melee  },
+            new WeaponSpec { sourceFolder = "fantasy+gun+3d+model-legend",      cleanName = "FantasyGun",       rank = ItemRank.Legendary, kind = WeaponKind.Ranged },
+            new WeaponSpec { sourceFolder = "fantasy+pistol+3d+model-legend",   cleanName = "FantasyPistol",    rank = ItemRank.Legendary, kind = WeaponKind.Ranged },
         };
 
         [MenuItem("Tools/Dungeon Blade/Weapons/1. Import Weapons by Rank")]
@@ -291,7 +291,7 @@ namespace DungeonBlade.EditorTools
             SetIfPresent(so, "stackable",   false);
             SetIfPresent(so, "weaponKind",  (int)spec.kind);
             // Rank-driven economy: legendaries are worth a lot, commons are pocket change.
-            int sell = spec.rank == ItemRank.Legend ? 500 : spec.rank == ItemRank.Rare ? 120 : 25;
+            int sell = spec.rank == ItemRank.Legendary ? 500 : spec.rank == ItemRank.Rare ? 120 : 25;
             SetIfPresent(so, "sellValue",   sell);
             SetIfPresent(so, "buyValue",    sell * 4);
             so.ApplyModifiedPropertiesWithoutUndo();
