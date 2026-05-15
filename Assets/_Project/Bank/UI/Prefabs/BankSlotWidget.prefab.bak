@@ -61,7 +61,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.045, g: 0.05, b: 0.075, a: 0.78}
+  m_Color: {r: 0.23529412, g: 0.23529412, b: 0.27450982, a: 0.8627451}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -93,11 +93,9 @@ MonoBehaviour:
   background: {fileID: 776843912548594935}
   iconImage: {fileID: 1642071445622123647}
   quantityText: {fileID: 4201582946382758604}
-  emptyColor: {r: 0.045, g: 0.05, b: 0.075, a: 0.78}
-  filledColor: {r: 0.08, g: 0.095, b: 0.13, a: 0.92}
-  hoverColor: {r: 0.95, g: 0.18, b: 0.18, a: 1}
-  hoverScale: 1.08
-  tweenSpeed: 14
+  emptyColor: {r: 0.15, g: 0.18, b: 0.15, a: 0.85}
+  filledColor: {r: 0.25, g: 0.32, b: 0.25, a: 0.95}
+  hoverColor: {r: 0.4, g: 0.55, b: 0.4, a: 1}
 --- !u!1 &2186108294450978996
 GameObject:
   m_ObjectHideFlags: 0

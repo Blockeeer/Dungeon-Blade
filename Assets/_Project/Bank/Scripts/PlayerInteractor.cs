@@ -39,6 +39,7 @@ namespace DungeonBlade.Bank
             if (Inventory.InventoryController.Instance != null && Inventory.InventoryController.Instance.IsOpen) return true;
             if (UI.BankController.Instance != null && UI.BankController.Instance.IsOpen) return true;
             if (UI.ShopController.Instance != null && UI.ShopController.Instance.IsOpen) return true;
+            if (PortalConfirmDialog.Instance != null && PortalConfirmDialog.Instance.IsOpen) return true;
             return false;
         }
 
