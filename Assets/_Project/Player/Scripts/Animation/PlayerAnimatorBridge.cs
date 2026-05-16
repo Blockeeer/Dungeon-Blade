@@ -92,6 +92,7 @@ namespace DungeonBlade.Player
             {
                 stats.OnDamaged += OnDamaged;
                 stats.OnDeath   += OnDied;
+                stats.OnParry   += OnParried;
             }
         }
 
@@ -115,6 +116,7 @@ namespace DungeonBlade.Player
             {
                 stats.OnDamaged -= OnDamaged;
                 stats.OnDeath   -= OnDied;
+                stats.OnParry   -= OnParried;
             }
         }
 
@@ -214,6 +216,8 @@ namespace DungeonBlade.Player
             // Pick which react animation to play based on hit weight.
             _animator.SetTrigger(amount >= bigHitThreshold ? HashBigHit : HashHit);
         }
+
+        void OnParried() => _animator.SetTrigger(HashParry);
 
         void OnWeaponEquipped(WeaponBase weapon)
         {

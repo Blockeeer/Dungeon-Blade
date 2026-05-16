@@ -384,6 +384,10 @@ namespace DungeonBlade.Player
         {
             if (Time.time < _nextDodgeTime) return false;
             if (!_input.Dash.WasPressedThisFrame()) return false;
+            // Ground-only: roll/dive animations don't make sense mid-air and
+            // their burst-velocity violates the jump arc. Player must land
+            // first; the press is dropped, not buffered.
+            if (!_isGrounded) return false;
             if (_stats != null && !_stats.TryConsumeStamina(dodgeStaminaCost)) return false;
 
             // Roll always uses current movement input — supports W/A/S/D and

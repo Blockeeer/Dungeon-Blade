@@ -58,6 +58,9 @@ namespace DungeonBlade.Combat
 
         public System.Action<int, float> OnHit;
         public System.Action<int> OnSwingStart;
+        // VFX-friendly variant: world-space center of the sweep at the moment
+        // hits land. Use this for spawning hit-spark particles.
+        public System.Action<Vector3> OnHitAtPosition;
 
         void Update()
         {
@@ -226,7 +229,11 @@ namespace DungeonBlade.Combat
             };
 
             int hits = MeleeHitbox.SphereSweep(origin, hitRadius, hitMask, _hitThisSwing, template);
-            if (hits > 0) OnHit?.Invoke(CurrentComboIndex, dmg);
+            if (hits > 0)
+            {
+                OnHit?.Invoke(CurrentComboIndex, dmg);
+                OnHitAtPosition?.Invoke(origin);
+            }
         }
 
         public void CancelForGunshot()

@@ -8046,7 +8046,7 @@ Transform:
   m_GameObject: {fileID: 1127855588}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.4}
+  m_LocalPosition: {x: 0, y: -0.006, z: 0.4}
   m_LocalScale: {x: 0.08, y: 0.08, z: 0.8}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -9923,6 +9923,7 @@ GameObject:
   - component: {fileID: 1376226057}
   - component: {fileID: 1376226059}
   - component: {fileID: 1376226060}
+  - component: {fileID: 1376226061}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -10185,6 +10186,20 @@ MonoBehaviour:
     m_Bits: 4294967295
   promptLabel: {fileID: 773413003}
   lookCamera: {fileID: 330585545}
+--- !u!114 &1376226061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1376226049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a90f5fad868922b4e9f7b56c285a024b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  milestoneEvery: 10
+  expPerMilestone: 25
 --- !u!1001 &1391938718
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10529,6 +10544,71 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1429084716}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1437549493
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1437549495}
+  - component: {fileID: 1437549494}
+  m_Layer: 0
+  m_Name: VfxBindings
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1437549494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1437549493}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b83bd53588ab47c4880c65301ff36f8c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerStats: {fileID: 1376226051}
+  playerMovement: {fileID: 1376226050}
+  playerCombat: {fileID: 1376226057}
+  boss: {fileID: 409167069}
+  swordHitSparkPrefab: {fileID: 6037215654518503704, guid: 5c33b95f69e946e4fb9b40155b9873d0,
+    type: 3}
+  gunHitSparkPrefab: {fileID: 6037215654518503704, guid: 868b8928461410a4aaa938929decb00b,
+    type: 3}
+  muzzleFlashPrefab: {fileID: 8924841574091977120, guid: 2ea791d41435008498cbb16b17be9b19,
+    type: 3}
+  playerDamageVfxPrefab: {fileID: 8097437704584282735, guid: 4846eaea2441d9e4d9d6b7ff635d87b9,
+    type: 3}
+  dashTrailPrefab: {fileID: 7334048216705090611, guid: 1cdd74088bda17c4cad591ca40dbbe7a,
+    type: 3}
+  levelUpVfxPrefab: {fileID: 1896838314096068435, guid: eb94b68396519fd4f8086c54de3aaa28,
+    type: 3}
+  enemyDeathDustPrefab: {fileID: 6680458363470172269, guid: 289feb05c2131d24eb95c611fe287100,
+    type: 3}
+  bossEnrageAuraPrefab: {fileID: 3742783494938104134, guid: b0d06bc5ff2de2345bd26960633a6b0c,
+    type: 3}
+  defaultLifetime: 2
+--- !u!4 &1437549495
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1437549493}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.7324877, y: 1.1193725, z: -5.1516585}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1453339148
 GameObject:
   m_ObjectHideFlags: 0
@@ -11956,7 +12036,7 @@ Transform:
   m_GameObject: {fileID: 1696408721}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.2}
+  m_LocalPosition: {x: 0, y: -0.0059999228, z: 0.2}
   m_LocalScale: {x: 0.1, y: 0.15, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -14127,6 +14207,26 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1024158554651883660, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_fontColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1024158554651883660, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_fontColor.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1024158554651883660, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_fontColor.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1024158554651883660, guid: 6ef69a6889cd4714ca1b3440713c4f10,
+        type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4294967295
+      objectReference: {fileID: 0}
     - target: {fileID: 1795779315796072170, guid: 6ef69a6889cd4714ca1b3440713c4f10,
         type: 3}
       propertyPath: m_Color.b
@@ -14569,3 +14669,4 @@ SceneRoots:
   - {fileID: 256493556}
   - {fileID: 641017121}
   - {fileID: 1411714847}
+  - {fileID: 1437549495}

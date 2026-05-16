@@ -65,9 +65,9 @@ namespace DungeonBlade.UI.HUD
             {
                 _hookedGun = gun;
                 gun.OnAmmoChanged += OnAmmoChanged;
-                // Force-refresh once so the HUD shows current ammo even
-                // before any shot/reload event fires.
-                RefreshGunAmmo(gun);
+                // Force the gun to re-fire its event so the HUD shows correct
+                // X/Y format on first equip, not just "Ammo: X".
+                gun.SyncAmmoUI();
             }
             else
             {
@@ -78,14 +78,6 @@ namespace DungeonBlade.UI.HUD
         void OnAmmoChanged(int current, int max)
         {
             if (ammoOrDurability != null) ammoOrDurability.text = $"{current} / {max}";
-        }
-
-        void RefreshGunAmmo(Gun gun)
-        {
-            // Gun stores Ammo but not max publicly — use reflection-free approach:
-            // re-fire its own event by checking Ammo and inferring max from
-            // the format we want. Simplest: just show "Ammo: X".
-            if (ammoOrDurability != null) ammoOrDurability.text = $"Ammo: {gun.Ammo}";
         }
 
         void UnhookGun()

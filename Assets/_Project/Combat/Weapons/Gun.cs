@@ -28,6 +28,9 @@ namespace DungeonBlade.Combat
         public System.Action OnHitDamageable;
         public System.Action<int, int> OnAmmoChanged;
         public System.Action<bool> OnAimChanged;
+        // VFX-friendly variants: position-aware events for spawning particles.
+        public System.Action<Vector3> OnFireAtPosition;       // fires at muzzle position
+        public System.Action<Vector3> OnHitAtPosition;        // fires at world hit point
 
         public override bool IsBusy => false;
 
@@ -45,6 +48,11 @@ namespace DungeonBlade.Combat
             if (aimCamera == null) aimCamera = Camera.main;
             OnAmmoChanged?.Invoke(Ammo, magSize);
         }
+
+        // Public re-fire so HUDs that subscribe AFTER OnEquip already happened
+        // (e.g. WeaponDisplayHUD on a late-equipped weapon) can pull the
+        // initial ammo state without inventing their own format.
+        public void SyncAmmoUI() => OnAmmoChanged?.Invoke(Ammo, magSize);
 
         public override void OnUnequip()
         {
@@ -83,6 +91,7 @@ namespace DungeonBlade.Combat
             Ammo--;
             OnAmmoChanged?.Invoke(Ammo, magSize);
             OnFire?.Invoke();
+            if (muzzle != null) OnFireAtPosition?.Invoke(muzzle.position);
 
             FireRay();
         }
@@ -122,6 +131,7 @@ namespace DungeonBlade.Combat
                         Type = DamageType.Ranged,
                     });
                     OnHitDamageable?.Invoke();
+                    OnHitAtPosition?.Invoke(hit.point);
                 }
 
                 Debug.DrawLine(origin, hit.point, Color.yellow, 0.05f);

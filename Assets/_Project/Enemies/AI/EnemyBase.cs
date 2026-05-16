@@ -198,6 +198,10 @@ namespace DungeonBlade.Enemies
 
         protected virtual void OnHurt(in DamageInfo info) { }
 
+        // Static event for VFX/SFX subscribers — fires whenever any enemy dies,
+        // passing the world position so a death dust prefab can spawn there.
+        public static event System.Action<Vector3> AnyEnemyDied;
+
         protected virtual void Die()
         {
             Health = 0f;
@@ -209,6 +213,8 @@ namespace DungeonBlade.Enemies
             {
                 Rewards.DropSpawner.SpawnLoot(lootTable, transform.position + Vector3.up * 0.5f, scatterRadius: 1.5f);
             }
+
+            AnyEnemyDied?.Invoke(transform.position);
 
             StartCoroutine(FadeAndDestroy());
         }

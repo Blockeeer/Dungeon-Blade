@@ -2,6 +2,31 @@
 
 This guide walks through wiring Mixamo FBX animations to the player character in Unity. It covers FBX import settings, Animator Controller creation, state machine wiring, and connecting animation events to existing scripts.
 
+---
+
+## ⚡ Current Status (as of latest cherry-pick)
+
+**Most of this doc's setup work is already done in your project** via the cherry-picked branch:
+
+| Section | Status |
+|---|---|
+| §1 — Humanoid rig setup | ✅ Done (FBXes imported with Humanoid avatars) |
+| §2 — Clip settings | ✅ Done (Bake/Loop configured) |
+| §3 — Disable root motion | ⬜ **VERIFY** — make sure Player's Animator has Apply Root Motion = ❌ |
+| §4 — Animator Controller | ✅ `Assets/_Project/Player/Animations/PlayerAnimator.controller` already exists |
+| §5 — Add core states | ✅ All states wired in the controller |
+| §6 — Add parameters | ✅ 24 parameters (Speed, MoveX, MoveZ, Grounded, Jump, BigJump, Roll, Dodge, Dash, Slide, Tired, Attack, HeavyAttack, Combo, Block, Parry, BlockBroken, Reload, Equip, WeaponType, Hit, BigHit, HitBack, Die) |
+| §7 — Wire transitions | ✅ State machine fully connected |
+| §8 — Bridge script | ✅ `PlayerAnimatorBridge.cs` already exists with parry trigger added |
+| §9 — Wire on Player | ⬜ **YOU DO THIS** — attach Animator to Player + drag controller |
+| §10 — Animation events | ⬜ Optional polish for hit-frame-synced damage |
+
+**What you actually need to do:** Steps 3 + 9 (wire the Player GameObject) and test. Everything else is already built.
+
+Skip down to §9 to start, or read §1-§8 for context on what was already configured.
+
+---
+
 **Prerequisites:**
 - M1-M10 complete (player movement, combat, etc. are all script-driven and working).
 - Animation FBX files placed in `Assets/_Project/Player/Animations/<category>/` per the folder structure.
@@ -60,15 +85,15 @@ After setting the rig:
 
 | Clip type | Loop Time | Loop Pose | Bake Into Pose | Notes |
 |---|---|---|---|---|
-| Idle | ✅ | ✅ | ❌ | Loops smoothly while standing |
-| Run / Walk | ✅ | ✅ | ❌ | Continuous locomotion loop |
-| Jump (start) | ❌ | ❌ | ✅ Y, Z | Single takeoff motion |
+| Idle                  | ✅ | ✅ | ❌ | Loops smoothly while standing |
+| Run / Walk            | ✅ | ✅ | ❌ | Continuous locomotion loop |
+| Jump (start)          | ❌ | ❌ | ✅ Y, Z | Single takeoff motion |
 | Jump (loop / falling) | ✅ | ✅ | ❌ | Held while airborne |
-| Jump (land) | ❌ | ❌ | ❌ | Plays once on touchdown |
-| Dash / Dodge / Roll | ❌ | ❌ | ✅ Y, Z (root motion off) | One-shot burst |
-| Attack swings | ❌ | ❌ | ❌ | One-shot, animation event drives hit frame |
-| Death | ❌ | ❌ | ❌ | One-shot, no return |
-| Block Idle | ✅ | ✅ | ❌ | Held while blocking |
+| Jump (land)           | ❌ | ❌ | ❌ | Plays once on touchdown |
+| Dash / Dodge / Roll   | ❌ | ❌ | ✅ Y, Z (root motion off) | One-shot burst |
+| Attack swings         | ❌ | ❌ | ❌ | One-shot, animation event drives hit frame |
+| Death                 | ❌ | ❌ | ❌ | One-shot, no return |
+| Block Idle            | ✅ | ✅ | ❌ | Held while blocking |
 
 **Loop Pose checkbox:** ensures the last frame transitions cleanly back to the first frame. Critical for idles and runs.
 
@@ -180,9 +205,47 @@ In the Animator window, click and drag from one state to another to create a tra
 
 ---
 
-## §8 — Create the PlayerAnimator script
+## §8 — Bridge script
 
-Bridge between gameplay code and animator parameters.
+✅ **Already exists** at `Assets/_Project/Player/Scripts/Animation/PlayerAnimatorBridge.cs`.
+
+The script subscribes to all relevant gameplay events and drives the Animator parameters:
+
+| Event source | Triggers / sets |
+|---|---|
+| `PlayerMovement.Jumped` | `Jump` trigger; `BigJump` bool reset to false |
+| `PlayerMovement.HighJumpStarted` | `BigJump` bool true (lands as Hard Landing) |
+| `PlayerMovement.DashStarted` | `Dash` trigger |
+| `PlayerMovement.DodgeStarted` | `Dodge` or `Roll` trigger (picked from `LastBurstDirection`) |
+| `PlayerMovement.HorizontalSpeed` / `Velocity` | `Speed` float, `MoveX` / `MoveZ` floats for 2D blend tree |
+| `PlayerMovement.IsGrounded` / `IsSliding` | `Grounded` bool, `Slide` bool |
+| `PlayerCombat.AttackPerformed` | `Attack` trigger |
+| `PlayerCombat.HeavyAttackPerformed` | `HeavyAttack` trigger |
+| `PlayerCombat.ReloadPerformed` | `Reload` trigger |
+| `PlayerCombat.WeaponEquipped` | `WeaponType` int, `Equip` trigger |
+| `Sword.IsBlocking` (continuous read) | `Block` bool |
+| `PlayerStats.OnDamaged(amount)` | `Hit` (low damage) or `BigHit` (damage ≥ 25) trigger |
+| `PlayerStats.OnParry` | `Parry` trigger |
+| `PlayerStats.OnDeath` | `Die` trigger |
+| `PlayerStats.IsLowStamina` (continuous read) | `Tired` bool |
+
+**Inspector fields:**
+- `Movement` — PlayerMovement component (auto-found via `GetComponent` if same GameObject)
+- `Combat` — PlayerCombat component
+- `Stats` — PlayerStats component
+- `Camera Rig` — the camera rig transform (used to project velocity onto camera basis for strafe/forward blends)
+
+**Tuning fields:**
+- `Idle Speed Deadzone = 0.1` — horizontal speed below this is treated as idle
+- `Speed Smoothing = 12` — how fast Speed / MoveX / MoveZ chase actual values
+- `Reference Walk Speed = 6` — normalizes MoveX/MoveZ to [-1, 1] range
+- `Big Hit Threshold = 25` — damage amount ≥ this fires BigHit instead of Hit
+
+---
+
+### Old skeleton script (for reference only — REPLACED by PlayerAnimatorBridge.cs)
+
+The original draft below is kept as a learning reference. The actual production script is more comprehensive (see file path above).
 
 **Create file:** `Assets/_Project/Player/Scripts/Animation/PlayerAnimator.cs`
 
@@ -245,16 +308,72 @@ Then call `playerAnimator.TriggerDash()` etc. from PlayerMovement when the corre
 
 ## §9 — Wire on the Player GameObject
 
-1. Open the Dungeon scene (or wherever your Player lives).
-2. Select the Player GameObject.
-3. Add Component → **Animator** (if not auto-added by the rigged FBX).
-4. **Controller** field → drag `Player_Animator.controller`.
-5. **Avatar** field → drag the avatar from your character's rigged FBX.
-6. **Apply Root Motion** = ❌.
-7. Add Component → **Player Animator** (the script from §8).
-8. Wire its fields:
-   - **Movement** → drag the same Player GameObject (PlayerMovement is on it).
-   - **Stats** → same.
+**Goal:** attach the existing Animator Controller + PlayerAnimatorBridge to your scene's Player.
+
+### 9a — Verify the Player has a visible character model
+
+The Player GameObject should already have a rigged character mesh as a child (e.g. `Aurelia`, `Lyra`, `Kaelen`). If not, drag one from `Assets/_Project/Player/Models/` into the Hierarchy as a child of Player.
+
+### 9b — Add the Animator component
+
+1. Open `3_Dungeon1.unity` (and later `2_Lobby.unity`).
+2. Hierarchy → click **the rigged character child** under Player (e.g. `Aurelia`). This is the GameObject that owns the skeleton, NOT the Player root.
+3. Inspector → **Add Component** → search `Animator` → click `Animator`.
+4. Inspector wiring on the Animator:
+
+   | Field | Value |
+   |---|---|
+   | **Controller** | drag `Assets/_Project/Player/Animations/PlayerAnimator.controller` from Project window |
+   | **Avatar** | drag the Avatar sub-asset from the character's FBX (in `Assets/_Project/Player/Models/`) — usually named `<CharacterName>Avatar` |
+   | **Apply Root Motion** | ❌ unchecked (CRITICAL — PlayerMovement drives position) |
+   | **Update Mode** | `Normal` (default) |
+   | **Culling Mode** | `Cull Update Transforms` (default) |
+
+### 9c — Add the PlayerAnimatorBridge component
+
+The bridge subscribes to gameplay events and pushes parameters to the Animator above.
+
+1. Same Animator-bearing GameObject (the character child) → **Add Component** → search `Player Animator Bridge`.
+2. Inspector wiring (most auto-find since they're on Player root):
+
+   | Field | Drag from Hierarchy |
+   |---|---|
+   | Movement | `Player` GameObject (root — has PlayerMovement) |
+   | Combat | `Player` GameObject (has PlayerCombat) |
+   | Stats | `Player` GameObject (has PlayerStats) |
+   | Camera Rig | the camera rig Transform under Player |
+
+   If the script auto-finds via `GetComponent` (since the character is a child of Player), some of these may already be wired — verify before manually dragging.
+
+3. **Tuning fields:** leave at defaults unless something feels off.
+
+### 9d — Save scene and test
+
+1. Ctrl+S.
+2. Press Play.
+3. **Expected:**
+   - Character idles (Breathing Idle) on spawn
+   - Walking forward → Running animation
+   - Strafe (A/D) → Strafe animations
+   - Backpedal (S) → Walking Backwards
+   - Press Space → Jump animation, lands → Landing animation
+   - Hold Shift + W → Roll forward
+   - Double-tap A → Side dodge / dive roll
+   - LMB sword swing → Sword And Shield Slash animation
+   - LMB gun fire → Firing Rifle animation
+   - Take damage → Hit Reaction
+   - Die → Falling Back Death
+
+### Common issues
+
+| Symptom | Fix |
+|---|---|
+| Character T-poses, no animation | Animator Controller not wired, or Avatar field empty |
+| Character animates but moves wrong | Apply Root Motion is ON — uncheck it |
+| Walks but doesn't strafe | Camera Rig field on Bridge is empty — wire it |
+| Animations play but character feels disconnected | Speed Smoothing = 12 is fine; try 8-15 range |
+| Hit reaction never fires | PlayerStats reference on Bridge is empty, OR no damage actually landed |
+| Attack animation plays but enemies don't take damage | That's expected — attack damage uses MeleeHitbox sweep, not animation events (yet). See §10 to fix. |
 
 ---
 
