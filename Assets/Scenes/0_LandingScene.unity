@@ -1049,7 +1049,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fadeGroup: {fileID: 1636951585}
   fadeImage: {fileID: 304937466}
-  defaultFadeDuration: 0.5
+  defaultFadeDuration: 0.8
+  minLoadingDisplay: 12
+  completeHoldTime: 1.5
+  defaultDisplayName: Loading
+  defaultTip: 'Tip: Block with right-click. Parry just before a hit lands to stagger your enemy.'
 --- !u!225 &1636951585
 CanvasGroup:
   m_ObjectHideFlags: 0
