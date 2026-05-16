@@ -41,6 +41,8 @@ namespace DungeonBlade.Core
         Image _flashBurst;
         Image _slashSweep;
         RectTransform _slashSweepRT;
+        Image _shineSweep;
+        RectTransform _shineSweepRT;
         TMP_Text _subtitle;
         TMP_Text _prompt;
         CanvasGroup _promptCG;
@@ -231,6 +233,36 @@ namespace DungeonBlade.Core
             _slashSweep.color = new Color(1f, 1f, 1f, 0f);
             _slashSweep.raycastTarget = false;
 
+            // Mask container shaped like the logo — clips the shine to the lettering silhouette.
+            if (_logoImage != null && _logoImage.sprite != null)
+            {
+                var maskGO = new GameObject("LogoShineMask",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Mask));
+                maskGO.layer = LayerMask.NameToLayer("UI");
+                var maskRT = (RectTransform)maskGO.transform;
+                maskRT.SetParent(canvasRT, false);
+                AnchorCenter(maskRT, _logoBasePos, _logoSize);
+                maskRT.SetSiblingIndex(_logoRT.GetSiblingIndex() + 1);
+
+                var maskImg = maskGO.GetComponent<Image>();
+                maskImg.sprite = _logoImage.sprite;
+                maskImg.preserveAspect = true;
+                maskImg.raycastTarget = false;
+                maskImg.color = Color.white;
+
+                var mask = maskGO.GetComponent<Mask>();
+                mask.showMaskGraphic = false;
+
+                // Recurring diagonal shine — child of the mask, so it only renders over the lettering.
+                _shineSweep = CreateImage(maskRT, "ShineSweep", siblingIndex: 0);
+                _shineSweepRT = _shineSweep.rectTransform;
+                AnchorCenter(_shineSweepRT, Vector2.zero, new Vector2(140f, _logoSize.y * 1.8f));
+                _shineSweep.sprite = SpriteFromTexture(BuildHorizontalSweepTexture());
+                _shineSweep.color = new Color(1f, 1f, 1f, 0f);
+                _shineSweepRT.localRotation = Quaternion.Euler(0f, 0f, 18f);
+                _shineSweep.raycastTarget = false;
+            }
+
             // White flash burst that explodes outward on entrance.
             _flashBurst = CreateImage(canvasRT, "FlashBurst", siblingIndex: titleSibling);
             AnchorCenter(_flashBurst.rectTransform, _logoBasePos, new Vector2(900f, 900f));
@@ -355,6 +387,41 @@ namespace DungeonBlade.Core
             StartCoroutine(HaloPulseRoutine());
             StartCoroutine(LogoEchoDriftRoutine());
             StartCoroutine(ElectricJoltRoutine());
+            StartCoroutine(ShineSweepLoopRoutine());
+        }
+
+        IEnumerator ShineSweepLoopRoutine()
+        {
+            if (_shineSweep == null || _shineSweepRT == null) yield break;
+            // Initial delay so the recurring shine doesn't fight the entrance slash.
+            float wait = 2.4f;
+            while (!_advancing)
+            {
+                float elapsed = 0f;
+                while (elapsed < wait && !_advancing)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                if (_advancing) yield break;
+
+                float dur = 0.9f;
+                float t = 0f;
+                float halfWidth = _logoSize.x * 0.65f;
+                while (t < dur)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float k = Mathf.Clamp01(t / dur);
+                    float e = EaseOutCubic(k);
+                    float x = Mathf.Lerp(-halfWidth, halfWidth, e);
+                    _shineSweepRT.anchoredPosition = new Vector2(x, 0f);
+                    float a = Mathf.Sin(k * Mathf.PI) * 0.9f;
+                    _shineSweep.color = new Color(1f, 0.97f, 0.88f, a);
+                    yield return null;
+                }
+                _shineSweep.color = new Color(1f, 1f, 1f, 0f);
+                wait = Random.Range(3.4f, 5.2f);
+            }
         }
 
         IEnumerator FlashBurstRoutine()
