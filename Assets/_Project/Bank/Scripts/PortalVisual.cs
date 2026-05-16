@@ -37,6 +37,10 @@ namespace DungeonBlade.Bank
         Vector3 energyPlaneEuler = Vector3.zero;
         [SerializeField, Tooltip("World-space size of the energy plane (width, height). Ignored when 'Fit Energy To Arch Bounds' is on.")]
         Vector2 energyPlaneSizeWorld = new Vector2(2f, 3f);
+        [SerializeField, Tooltip("Use a doorway-arch shape (flat bottom + semicircular top) instead of a circular disc.")]
+        bool useArchShape = true;
+        [SerializeField, Range(0.05f, 0.95f), Tooltip("Portion of the total height taken up by the semicircular arch on top (rest is the rectangular bottom).")]
+        float archShapeArcRatio = 0.5f;
 
         [Header("Auto-fit energy to arch opening")]
         [SerializeField, Tooltip("When an arch model is assigned, auto-size the energy disc to fill the arch's renderer bounds.")]
@@ -54,6 +58,14 @@ namespace DungeonBlade.Bank
         [SerializeField] Color emissionHigh = new Color(1.50f, 0.25f, 0.25f, 1f);
         [SerializeField] float pulseSpeed = 1.2f;
         [SerializeField] Vector2 swirlScrollSpeed = new Vector2(0.05f, 0.15f);
+
+        [Header("Spiral motion (custom portal shader)")]
+        [SerializeField, Tooltip("Spin speed of the swirl around its centre (radians/sec).")]
+        float spiralRotationSpeed = 1.4f;
+        [SerializeField, Tooltip("Speed the pattern is pulled radially inwards (positive) or outwards (negative).")]
+        float spiralRadialScrollSpeed = 0.6f;
+        [SerializeField, Range(0f, 6f), Tooltip("How tightly the arms wind into the centre. 0 = circular bands, higher = tighter spirals.")]
+        float spiralTwist = 2.0f;
 
         [Header("Glow light")]
         [SerializeField] bool addPointLight = true;
@@ -186,8 +198,9 @@ namespace DungeonBlade.Bank
 
             var mf = go.GetComponent<MeshFilter>();
             if (mf == null) mf = go.AddComponent<MeshFilter>();
-            if (mf.sharedMesh == null || mf.sharedMesh.name != "PortalDisc_Auto")
-                mf.sharedMesh = GenerateDiscMesh(48);
+            string wantedMesh = useArchShape ? $"PortalArch_Auto_{archShapeArcRatio:0.00}" : "PortalDisc_Auto";
+            if (mf.sharedMesh == null || mf.sharedMesh.name != wantedMesh)
+                mf.sharedMesh = useArchShape ? GenerateArchMesh(32, archShapeArcRatio) : GenerateDiscMesh(48);
 
             if (go.GetComponent<MeshRenderer>() == null) go.AddComponent<MeshRenderer>();
 
@@ -255,6 +268,54 @@ namespace DungeonBlade.Bank
             return true;
         }
 
+        static Mesh GenerateArchMesh(int arcSegments, float archHeightRatio)
+        {
+            archHeightRatio = Mathf.Clamp(archHeightRatio, 0.05f, 0.95f);
+            float archStartY = 0.5f - archHeightRatio;
+
+            int outlineCount = 4 + (arcSegments - 1);
+            var verts = new Vector3[1 + outlineCount];
+            var uvs = new Vector2[verts.Length];
+            var tris = new int[outlineCount * 3];
+
+            verts[0] = Vector3.zero;
+            uvs[0] = new Vector2(0.5f, 0.5f);
+
+            int idx = 1;
+            verts[idx] = new Vector3(-0.5f, -0.5f, 0f); uvs[idx] = new Vector2(0f, 0f); idx++;
+            verts[idx] = new Vector3( 0.5f, -0.5f, 0f); uvs[idx] = new Vector2(1f, 0f); idx++;
+            verts[idx] = new Vector3( 0.5f, archStartY, 0f); uvs[idx] = new Vector2(1f, archStartY + 0.5f); idx++;
+
+            for (int i = 1; i < arcSegments; i++)
+            {
+                float t = i / (float)arcSegments;
+                float ang = t * Mathf.PI;
+                float x = 0.5f * Mathf.Cos(ang);
+                float y = archStartY + archHeightRatio * Mathf.Sin(ang);
+                verts[idx] = new Vector3(x, y, 0f);
+                uvs[idx] = new Vector2(x + 0.5f, y + 0.5f);
+                idx++;
+            }
+
+            verts[idx] = new Vector3(-0.5f, archStartY, 0f); uvs[idx] = new Vector2(0f, archStartY + 0.5f); idx++;
+
+            for (int i = 0; i < outlineCount; i++)
+            {
+                int next = (i + 1) % outlineCount;
+                tris[i * 3] = 0;
+                tris[i * 3 + 1] = 1 + i;
+                tris[i * 3 + 2] = 1 + next;
+            }
+
+            var mesh = new Mesh { name = $"PortalArch_Auto_{archHeightRatio:0.00}" };
+            mesh.vertices = verts;
+            mesh.uv = uvs;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
         static Mesh GenerateDiscMesh(int segments)
         {
             var mesh = new Mesh { name = "PortalDisc_Auto" };
@@ -288,7 +349,8 @@ namespace DungeonBlade.Bank
 
         Material CreateEnergyMaterial()
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            Shader shader = Shader.Find("DungeonBlade/PortalEnergy");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Color");
             if (shader == null)
             {
@@ -303,6 +365,7 @@ namespace DungeonBlade.Bank
             if (m.HasProperty("_Color")) m.color = energyBaseColor;
             m.EnableKeyword("_EMISSION");
             if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", emissionLow);
+            if (m.HasProperty("_SpiralTwist")) m.SetFloat("_SpiralTwist", spiralTwist);
 
             var swirl = CreateSwirlTexture(256);
             if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", swirl);
@@ -314,22 +377,19 @@ namespace DungeonBlade.Bank
         static Texture2D CreateSwirlTexture(int size)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "PortalSwirl_Auto", wrapMode = TextureWrapMode.Repeat };
-            float c = size * 0.5f;
-            float maxR = size * 0.5f;
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float dx = (x - c) / maxR;
-                    float dy = (y - c) / maxR;
-                    float r = Mathf.Sqrt(dx * dx + dy * dy);
-                    float ang = Mathf.Atan2(dy, dx);
+                    float u = x / (float)size;
+                    float v = y / (float)size;
+                    float angle = u * Mathf.PI * 2f;
 
-                    float swirl1 = Mathf.Sin(ang * 6f + r * 10f);
-                    float swirl2 = Mathf.Sin(ang * 3f - r * 8f + Mathf.PI * 0.5f);
-                    float flow = Mathf.Sin(dx * 8f + dy * 4f) * Mathf.Cos(dy * 6f - dx * 2f);
+                    float band1 = Mathf.Sin(angle * 5f + v * 6f);
+                    float band2 = Mathf.Sin(angle * 3f - v * 4f + 1.2f);
+                    float fine  = Mathf.Sin(angle * 11f + v * 18f);
 
-                    float brightness = 0.70f + 0.18f * swirl1 + 0.12f * swirl2 + 0.10f * flow;
+                    float brightness = 0.55f + 0.25f * band1 + 0.18f * band2 + 0.10f * fine;
                     brightness = Mathf.Clamp01(brightness);
 
                     tex.SetPixel(x, y, new Color(brightness, brightness, brightness, 1f));
@@ -459,6 +519,13 @@ namespace DungeonBlade.Bank
                     _energyMat.SetColor("_BaseColor", em);
                 if (_energyMat.HasProperty("_Color"))
                     _energyMat.SetColor("_Color", em);
+
+                if (_energyMat.HasProperty("_UVRotation"))
+                    _energyMat.SetFloat("_UVRotation", Time.time * spiralRotationSpeed);
+                if (_energyMat.HasProperty("_UVRadialScroll"))
+                    _energyMat.SetFloat("_UVRadialScroll", Time.time * spiralRadialScrollSpeed);
+                if (_energyMat.HasProperty("_SpiralTwist"))
+                    _energyMat.SetFloat("_SpiralTwist", spiralTwist);
 
                 Vector2 offset = swirlScrollSpeed * Time.time;
                 if (_energyMat.HasProperty("_BaseMap")) _energyMat.SetTextureOffset("_BaseMap", offset);

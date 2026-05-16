@@ -27,6 +27,12 @@ namespace DungeonBlade.Bank
         [SerializeField] string confirmButtonText = "Proceed";
         [SerializeField] string cancelButtonText = "Cancel";
 
+        [Header("Loading screen")]
+        [SerializeField, Tooltip("Title shown on the loading screen. Leave blank to auto-format the scene name.")]
+        string loadingDisplayName = "Forsaken Keep";
+        [SerializeField, TextArea(2, 4)]
+        string loadingTip = "Tip: Block with right-click. Parry just before a hit lands to stagger your enemy.";
+
         bool _alreadyTriggered;
 
         void Awake()
@@ -77,7 +83,7 @@ namespace DungeonBlade.Bank
         {
             if (saveBeforeTransition && persistence != null) persistence.SaveNow();
 
-            if (FadeLoader.Instance != null) FadeLoader.Instance.LoadScene(targetScene);
+            if (FadeLoader.Instance != null) FadeLoader.Instance.LoadScene(targetScene, loadingDisplayName, loadingTip);
             else SceneLoader.Load(targetScene);
         }
     }
