@@ -9,6 +9,7 @@ namespace DungeonBlade.Bank.UI
 
         [SerializeField] GameObject bankPanel;
 
+        PlayerInputActions _input;
         bool _isOpen;
         public bool IsOpen => _isOpen;
 
@@ -20,7 +21,14 @@ namespace DungeonBlade.Bank.UI
 
         void Start()
         {
+            _input = InputManager.Instance != null ? InputManager.Instance.Actions : new PlayerInputActions();
+            if (InputManager.Instance == null) _input.Enable();
             if (bankPanel != null) bankPanel.SetActive(false);
+        }
+
+        void Update()
+        {
+            if (_isOpen && _input != null && _input.Pause.WasPressedThisFrame()) Close();
         }
 
         void OnDestroy()
