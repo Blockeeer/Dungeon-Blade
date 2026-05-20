@@ -56,6 +56,8 @@ namespace DungeonBlade.Bank
             {
                 var inter = h.GetComponentInParent<Interactable>();
                 if (inter == null) continue;
+                // Skip anything that handles its own proximity trigger — F-key UX is redundant for those.
+                if (inter.GetComponent<ProximityAutoInteract>() != null) continue;
                 Vector3 to = (inter.transform.position - origin).normalized;
                 float dot = Vector3.Dot(fwd, to);
                 if (dot > bestDot)

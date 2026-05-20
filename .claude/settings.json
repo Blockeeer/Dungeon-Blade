@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(awk '/^GameObject:/{getline; while\\($0!~/m_Name:/\\) getline; gameobj_name=$2} /^--- !u!1 &/{id=$3; gsub\\(\"&\",\"\",id\\)} /m_Name: SM_Generic_Tree_01/{print id; exit}' \"d:/UnityProjects/Version 4/Dungeon-Blade/Assets/Synty/PolygonStarter/Prefabs/SM_Generic_Tree_01.prefab\")",
+      "Bash(awk '/^--- !u!4 &/{tid=$3; gsub\\(\"&\",\"\",tid\\)} /^--- !u!1 &/{gid=$3; gsub\\(\"&\",\"\",gid\\)} /m_GameObject: {fileID:/{ goid=$3; gsub\\(\"}\",\"\",goid\\); gsub\\(\",\",\"\",goid\\); current_go=goid } /m_Father: {fileID: 0}/{print \"Transform=\" tid \" GameObject=\" current_go; exit}' \"d:/UnityProjects/Version 4/Dungeon-Blade/Assets/Synty/PolygonStarter/Prefabs/SM_Generic_Tree_01.prefab\")"
+    ],
     "additionalDirectories": [
       "d:\\UnityProjects\\Version 4\\Dungeon-Blade\\Assets\\_Project\\Bank\\UI\\Prefabs",
       "d:\\UnityProjects\\Version 4\\Dungeon-Blade\\Zip file"
