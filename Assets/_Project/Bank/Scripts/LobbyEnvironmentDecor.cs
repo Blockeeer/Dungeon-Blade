@@ -38,6 +38,12 @@ namespace DungeonBlade.Bank
         [SerializeField] float portalClearRadius = 4.5f;
         [Tooltip("World-space portal position used for the tile cutout (override if your portal is moved).")]
         [SerializeField] Vector3 portalPosition = new Vector3(0f, 0f, -20f);
+        [Tooltip("Optional PBR cobblestone material A (e.g. Yughues M_YFCM_*). If null, falls back to procedural flat color.")]
+        [SerializeField] Material cobbleMaterialOverrideA;
+        [Tooltip("Optional PBR cobblestone material B (alternates with A in the checkerboard pattern). If null, uses A or falls back to procedural.")]
+        [SerializeField] Material cobbleMaterialOverrideB;
+        [Tooltip("UV scale on the cobble material per tile (1 = one full texture per tile, 2 = repeat twice across each tile, etc).")]
+        [SerializeField] float cobbleTextureScale = 1f;
 
         [Header("Barriers")]
         [Tooltip("If true, invisible BoxColliders are placed around the perimeter so the player can't walk off the playable area.")]
@@ -75,6 +81,32 @@ namespace DungeonBlade.Bank
         [SerializeField, Range(0.5f, 6f)] float torchIntensity = 3.2f;
         [SerializeField, Range(2f, 20f)] float torchRange = 8f;
 
+        [Header("Fire VFX (optional, big quality jump)")]
+        [Tooltip("Particle prefab spawned on top of the central fire pit (e.g. Synty FX_Fire_01). Replaces the procedural flame spheres visually.")]
+        [SerializeField] GameObject firePitVfxPrefab;
+        [Tooltip("Particle prefab spawned on each brazier (e.g. Synty FX_Candle_Flame_01 or smaller FX_Fire). Replaces the procedural flame spheres visually.")]
+        [SerializeField] GameObject brazierVfxPrefab;
+        [Tooltip("Scale applied to the brazier VFX. Bump up if the fire looks too small.")]
+        [SerializeField] float brazierVfxScale = 1f;
+        [Tooltip("Scale applied to the fire pit VFX. Bump up for a more dramatic central fire.")]
+        [SerializeField] float firePitVfxScale = 1.4f;
+        [Tooltip("If true, the procedural flame spheres are hidden when a VFX prefab is assigned (recommended).")]
+        [SerializeField] bool hideProcFlamesWhenVfx = true;
+
+        [Header("Atmospheric particles")]
+        [Tooltip("Spawn a slow dust-mote ambient particle system across the courtyard.")]
+        [SerializeField] bool buildDustMotes = true;
+        [Tooltip("Spawn rising ember sparks off each brazier + the central fire pit.")]
+        [SerializeField] bool buildEmberSparks = true;
+        [Tooltip("Fake volumetric god rays — long thin streak particles falling from above. URP doesn't support true volumetric lighting; this approximates it.")]
+        [SerializeField] bool buildGodRays = true;
+        [Tooltip("Direction the god rays travel (typically the sun's down vector). Y is the dominant axis.")]
+        [SerializeField] Vector3 godRayDirection = new Vector3(0.3f, -1f, -0.5f);
+        [Tooltip("Color tint applied to the rays. Warm gold = sunset, cool blue = morning, white = noon.")]
+        [SerializeField] Color godRayColor = new Color(1f, 0.85f, 0.55f, 0.35f);
+        [Range(2f, 30f)] [SerializeField] float godRayEmissionRate = 5f;
+        [Range(0.5f, 5f)] [SerializeField] float godRayWidth = 1.2f;
+
         const string BuiltRootName = "_LobbyDecor";
 
         // Cached materials shared between props for fewer draw calls.
@@ -105,6 +137,8 @@ namespace DungeonBlade.Bank
             if (buildOuterRocks) BuildOuterRocks(root.transform);
             if (buildDistantMountains) BuildDistantMountains(root.transform);
             if (buildInvisibleWalls) BuildInvisibleWalls(root.transform);
+            if (buildDustMotes) BuildDustMotes(root.transform);
+            if (buildGodRays) BuildGodRays(root.transform);
         }
 
         // Standalone wasteland — the grass donut around the courtyard that hides the
@@ -235,13 +269,37 @@ namespace DungeonBlade.Bank
                     if (dx * dx + dz * dz < portalClearSq) continue;
 
                     bool useA = ((r + c) & 1) == 0;
-                    var mat = useA ? _cobbleA : _cobbleB;
+                    Material mat;
+                    if (cobbleMaterialOverrideA != null)
+                    {
+                        // Use the assigned PBR material(s). If only A is set, every tile uses A.
+                        mat = useA ? cobbleMaterialOverrideA
+                                   : (cobbleMaterialOverrideB != null ? cobbleMaterialOverrideB : cobbleMaterialOverrideA);
+                    }
+                    else
+                    {
+                        mat = useA ? _cobbleA : _cobbleB;
+                    }
                     // Shrink each tile slightly so a grout line shows between them — proper cobblestone look.
                     var tile = MakeCube(floor.transform, $"Tile_{r}_{c}",
                         new Vector3(x, overlayY, z),
                         new Vector3(tileSize * tileFill, 0.10f, tileSize * tileFill), mat);
                     // Subtle rotation jitter so the grid doesn't look mechanical.
                     tile.transform.localRotation = Quaternion.Euler(0f, ((r * 7) + (c * 11)) % 4 * 1.5f, 0f);
+                    // If using a PBR material, set texture tiling so each tile shows one (or N) full pattern repeat.
+                    if (cobbleMaterialOverrideA != null && cobbleTextureScale > 0f)
+                    {
+                        var mr = tile.GetComponent<MeshRenderer>();
+                        if (mr != null)
+                        {
+                            var mpb = new MaterialPropertyBlock();
+                            mr.GetPropertyBlock(mpb);
+                            Vector4 st = new Vector4(cobbleTextureScale, cobbleTextureScale, 0f, 0f);
+                            mpb.SetVector("_BaseMap_ST", st);
+                            mpb.SetVector("_MainTex_ST", st);
+                            mr.SetPropertyBlock(mpb);
+                        }
+                    }
                 }
             }
 
@@ -869,10 +927,28 @@ namespace DungeonBlade.Bank
             MakePrimitive(b.transform, "Bowl",     PrimitiveType.Cylinder, new Vector3(0f, 0.30f, 0f), new Vector3(0.80f, 0.20f, 0.80f), _iron);
             // Coals (rust-emissive)
             MakePrimitive(b.transform, "Coals",    PrimitiveType.Sphere,   new Vector3(0f, 0.42f, 0f), new Vector3(0.55f, 0.20f, 0.55f), _rust);
-            // Flame cluster (a few overlapping bright spheres for a stylized flame)
-            MakePrimitive(b.transform, "Flame1",   PrimitiveType.Sphere,   new Vector3(0f,    0.65f, 0f),    new Vector3(0.40f, 0.55f, 0.40f), _flame);
-            MakePrimitive(b.transform, "Flame2",   PrimitiveType.Sphere,   new Vector3(-0.10f, 0.55f, 0.05f), new Vector3(0.22f, 0.40f, 0.22f), _flame);
-            MakePrimitive(b.transform, "Flame3",   PrimitiveType.Sphere,   new Vector3( 0.08f, 0.58f, -0.06f), new Vector3(0.20f, 0.36f, 0.20f), _flame);
+
+            // Flame: use particle VFX prefab if assigned (much more realistic), else procedural spheres.
+            bool useVfx = brazierVfxPrefab != null;
+            if (!useVfx || !hideProcFlamesWhenVfx)
+            {
+                MakePrimitive(b.transform, "Flame1",   PrimitiveType.Sphere,   new Vector3(0f,    0.65f, 0f),    new Vector3(0.40f, 0.55f, 0.40f), _flame);
+                MakePrimitive(b.transform, "Flame2",   PrimitiveType.Sphere,   new Vector3(-0.10f, 0.55f, 0.05f), new Vector3(0.22f, 0.40f, 0.22f), _flame);
+                MakePrimitive(b.transform, "Flame3",   PrimitiveType.Sphere,   new Vector3( 0.08f, 0.58f, -0.06f), new Vector3(0.20f, 0.36f, 0.20f), _flame);
+            }
+            if (useVfx)
+            {
+                var vfx = Instantiate(brazierVfxPrefab, b.transform);
+                vfx.name = "FlameVFX";
+                vfx.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+                vfx.transform.localScale = Vector3.one * Mathf.Max(0.01f, brazierVfxScale);
+            }
+
+            // Ember sparks rising off the bowl
+            if (buildEmberSparks)
+            {
+                BuildEmberSparks(b.transform, new Vector3(0f, 0.55f, 0f), emissionRate: 6f, radius: 0.18f, lifetime: 1.2f, riseSpeed: 0.8f);
+            }
 
             // Warm point light
             var lightGo = new GameObject("TorchLight");
@@ -884,6 +960,7 @@ namespace DungeonBlade.Bank
             light.intensity = torchIntensity;
             light.range = torchRange;
             light.shadows = LightShadows.None;
+            lightGo.AddComponent<FireLightFlicker>();
         }
 
         // Hanging banner with frayed bottom.
@@ -1014,10 +1091,27 @@ namespace DungeonBlade.Bank
             log2.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             MakePrimitive(f.transform, "Coals", PrimitiveType.Sphere, new Vector3(0f, 0.30f, 0f), new Vector3(0.55f, 0.20f, 0.55f), _rust);
 
-            // Flame cluster
-            MakePrimitive(f.transform, "Flame1", PrimitiveType.Sphere, new Vector3(0f, 0.55f, 0f), new Vector3(0.45f, 0.65f, 0.45f), _flame);
-            MakePrimitive(f.transform, "Flame2", PrimitiveType.Sphere, new Vector3(-0.12f, 0.45f, 0.05f), new Vector3(0.24f, 0.45f, 0.24f), _flame);
-            MakePrimitive(f.transform, "Flame3", PrimitiveType.Sphere, new Vector3( 0.10f, 0.48f, -0.06f), new Vector3(0.22f, 0.40f, 0.22f), _flame);
+            // Flame: VFX prefab if assigned (realistic particle fire), else procedural spheres.
+            bool useFireVfx = firePitVfxPrefab != null;
+            if (!useFireVfx || !hideProcFlamesWhenVfx)
+            {
+                MakePrimitive(f.transform, "Flame1", PrimitiveType.Sphere, new Vector3(0f, 0.55f, 0f), new Vector3(0.45f, 0.65f, 0.45f), _flame);
+                MakePrimitive(f.transform, "Flame2", PrimitiveType.Sphere, new Vector3(-0.12f, 0.45f, 0.05f), new Vector3(0.24f, 0.45f, 0.24f), _flame);
+                MakePrimitive(f.transform, "Flame3", PrimitiveType.Sphere, new Vector3( 0.10f, 0.48f, -0.06f), new Vector3(0.22f, 0.40f, 0.22f), _flame);
+            }
+            if (useFireVfx)
+            {
+                var vfx = Instantiate(firePitVfxPrefab, f.transform);
+                vfx.name = "FireVFX";
+                vfx.transform.localPosition = new Vector3(0f, 0.35f, 0f);
+                vfx.transform.localScale = Vector3.one * Mathf.Max(0.01f, firePitVfxScale);
+            }
+
+            // Bigger, more dramatic ember sparks for the central bonfire
+            if (buildEmberSparks)
+            {
+                BuildEmberSparks(f.transform, new Vector3(0f, 0.45f, 0f), emissionRate: 20f, radius: 0.40f, lifetime: 2.0f, riseSpeed: 1.2f);
+            }
 
             // Strong central point light
             var lightGo = new GameObject("FireLight");
@@ -1029,6 +1123,217 @@ namespace DungeonBlade.Bank
             light.intensity = torchIntensity * 1.3f;
             light.range = torchRange * 1.6f;
             light.shadows = LightShadows.None;
+            // Central fire pit gets a slightly more dramatic flicker
+            lightGo.AddComponent<FireLightFlicker>().Configure(0.3f, 4.5f);
+        }
+
+        // ------------------------------------------------------------------
+        // Atmospheric particles — dust motes drifting across the courtyard,
+        // ember sparks rising off braziers and the central fire pit.
+        // ------------------------------------------------------------------
+        void BuildDustMotes(Transform root)
+        {
+            var go = new GameObject("DustMotes");
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(0f, 1.5f, -4f); // center over playable area
+            var ps = go.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(12f, 25f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.02f, 0.10f);
+            // Tiny motes — pinpoint specks catching light, not visible flecks.
+            main.startSize = new ParticleSystem.MinMaxCurve(0.008f, 0.018f);
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(1f, 0.92f, 0.75f, 0.20f),
+                new Color(1f, 0.85f, 0.65f, 0.30f));
+            main.gravityModifier = -0.02f; // slight upward drift
+            main.maxParticles = 200;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.playOnAwake = true;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 8f;
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(2f * courtyardHalfWidth, 4f, backRowZ - frontRowZ);
+
+            var velocityOverLifetime = ps.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
+            // All three axes must be the same MinMaxCurve mode — otherwise Unity errors per frame.
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(0.01f, 0.04f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] { new GradientColorKey(new Color(1f, 0.92f, 0.75f), 0f), new GradientColorKey(new Color(1f, 0.85f, 0.60f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.6f, 0.2f), new GradientAlphaKey(0.6f, 0.8f), new GradientAlphaKey(0f, 1f) });
+            colorOverLifetime.color = grad;
+
+            ConfigureParticleRenderer(ps, new Color(1f, 0.92f, 0.75f));
+        }
+
+        // Fake volumetric god rays — long stretched particle billboards that fall from above
+        // and represent shafts of sunlight cutting through the atmosphere. URP has no true
+        // volumetric lighting, so this is the closest cheap approximation.
+        void BuildGodRays(Transform root)
+        {
+            var go = new GameObject("GodRays");
+            go.transform.SetParent(root, false);
+            // Spawn above the courtyard so rays fall onto it.
+            go.transform.localPosition = new Vector3(0f, 12f, -4f);
+            var ps = go.AddComponent<ParticleSystem>();
+
+            Vector3 dir = godRayDirection.sqrMagnitude < 0.01f ? Vector3.down : godRayDirection.normalized;
+
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 1.6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(godRayWidth * 0.8f, godRayWidth * 1.4f);
+            main.startColor = godRayColor;
+            main.gravityModifier = 0f;
+            main.maxParticles = 60;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startRotation = new ParticleSystem.MinMaxCurve(-Mathf.PI, Mathf.PI);
+
+            var emission = ps.emission;
+            emission.rateOverTime = godRayEmissionRate;
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(courtyardHalfWidth * 1.6f, 1f, (backRowZ - frontRowZ) * 0.8f);
+
+            // Constant downward force along sun direction.
+            var velocityOverLifetime = ps.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(dir.x * 0.5f, dir.x * 0.8f);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(dir.y * 0.5f, dir.y * 0.8f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(dir.z * 0.5f, dir.z * 0.8f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] {
+                    new GradientColorKey(godRayColor, 0f),
+                    new GradientColorKey(godRayColor, 1f)
+                },
+                new[] {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(godRayColor.a, 0.3f),
+                    new GradientAlphaKey(godRayColor.a, 0.7f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = grad;
+
+            // Stretch the billboard into a long shaft along the velocity direction.
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 12f;
+            renderer.velocityScale = 0f;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            // Force the streak to align with the velocity vector (the godRayDirection).
+            renderer.alignment = ParticleSystemRenderSpace.Velocity;
+
+            // Reuse the same additive particle material as dust motes / embers.
+            ConfigureParticleRenderer(ps, godRayColor);
+        }
+
+        void BuildEmberSparks(Transform parent, Vector3 localPos, float emissionRate, float radius, float lifetime, float riseSpeed)
+        {
+            var go = new GameObject("EmberSparks");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            var ps = go.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(lifetime * 0.7f, lifetime * 1.3f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(riseSpeed * 0.6f, riseSpeed * 1.2f);
+            // Much smaller — embers should read as pinpoint specks, not glowing tiles.
+            main.startSize = new ParticleSystem.MinMaxCurve(0.008f, 0.022f);
+            main.startColor = new Color(1f, 0.6f, 0.18f, 1f);
+            main.gravityModifier = -0.15f; // float up like hot embers
+            main.maxParticles = 100;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.playOnAwake = true;
+
+            var emission = ps.emission;
+            emission.rateOverTime = emissionRate;
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 25f;
+            shape.radius = radius;
+            shape.position = Vector3.zero;
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] {
+                    new GradientColorKey(new Color(1f, 0.85f, 0.30f), 0f),
+                    new GradientColorKey(new Color(1f, 0.45f, 0.10f), 0.5f),
+                    new GradientColorKey(new Color(0.40f, 0.10f, 0.02f), 1f)
+                },
+                new[] {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.8f, 0.6f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = grad;
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.2f)));
+
+            // Slight horizontal drift so embers swirl as they rise.
+            // All three axes must use the same MinMaxCurve mode.
+            var velocityOverLifetime = ps.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+
+            // Light emission module to add a tiny additive glow per ember (optional, can be heavy)
+            // Skipped to keep perf clean.
+
+            ConfigureParticleRenderer(ps, new Color(1f, 0.55f, 0.15f));
+        }
+
+        static Material _particleMat;
+        static void ConfigureParticleRenderer(ParticleSystem ps, Color tint)
+        {
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.alignment = ParticleSystemRenderSpace.View;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            if (_particleMat == null)
+            {
+                // Try URP particles unlit first, then fallback to built-in particle additive.
+                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
+                if (shader == null) shader = Shader.Find("Mobile/Particles/Additive");
+                if (shader == null) shader = Shader.Find("Standard");
+                _particleMat = new Material(shader) { name = "RuntimeParticleMat" };
+                // URP particle unlit: set surface to Transparent, blend to Additive.
+                if (_particleMat.HasProperty("_Surface")) _particleMat.SetFloat("_Surface", 1f);
+                if (_particleMat.HasProperty("_Blend")) _particleMat.SetFloat("_Blend", 1f); // Additive
+                if (_particleMat.HasProperty("_BaseColor")) _particleMat.SetColor("_BaseColor", Color.white);
+                if (_particleMat.HasProperty("_Color")) _particleMat.SetColor("_Color", Color.white);
+                _particleMat.renderQueue = 3000;
+                _particleMat.mainTexture = Texture2D.whiteTexture;
+            }
+            renderer.material = _particleMat;
         }
 
         // ------------------------------------------------------------------
