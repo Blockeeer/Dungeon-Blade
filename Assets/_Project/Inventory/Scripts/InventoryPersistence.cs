@@ -1,6 +1,7 @@
 using DungeonBlade.Bank;
 using DungeonBlade.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DungeonBlade.Inventory
 {
@@ -9,6 +10,8 @@ namespace DungeonBlade.Inventory
         [SerializeField] ItemDatabase database;
         [SerializeField] bool loadOnStart = true;
         [SerializeField] bool saveOnQuit = true;
+        [Tooltip("Auto-save before every scene change. Belt-and-suspenders safety net so loot picked up in Dungeon persists when returning to Lobby even if a portal forgot to wire its persistence reference.")]
+        [SerializeField] bool saveOnSceneUnload = true;
 
         SaveSystem _save;
 
@@ -45,6 +48,26 @@ namespace DungeonBlade.Inventory
                 BankManager.Instance.SetStoredGold(_save.Bank.storedGold);
                 Debug.Log("[Bank] Loaded bank from bank.json");
             }
+        }
+
+        void OnEnable()
+        {
+            if (saveOnSceneUnload) SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        void OnDisable()
+        {
+            if (saveOnSceneUnload) SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            // Fires for any scene unload (portal transitions, manual loads,
+            // death respawns). Ensures the player's run progress survives
+            // even if the outgoing scene's portal forgot to call SaveNow.
+            if (!saveOnSceneUnload) return;
+            if (InventoryManager.Instance == null) return; // already torn down
+            SaveNow();
         }
 
         void OnApplicationQuit()

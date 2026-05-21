@@ -81,7 +81,18 @@ namespace DungeonBlade.Bank
 
         void BeginTransition()
         {
-            if (saveBeforeTransition && persistence != null) persistence.SaveNow();
+            if (saveBeforeTransition)
+            {
+                // Auto-find persistence if the Inspector field is empty —
+                // otherwise scene-specific portals that forget to wire it
+                // silently lose all the player's run progress on transition.
+                if (persistence == null)
+                {
+                    persistence = FindObjectOfType<InventoryPersistence>();
+                }
+                if (persistence != null) persistence.SaveNow();
+                else Debug.LogWarning("[ScenePortal] No InventoryPersistence in scene — run progress will NOT be saved on transition.");
+            }
 
             if (FadeLoader.Instance != null) FadeLoader.Instance.LoadScene(targetScene, loadingDisplayName, loadingTip);
             else SceneLoader.Load(targetScene);

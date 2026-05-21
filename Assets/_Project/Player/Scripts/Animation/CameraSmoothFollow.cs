@@ -27,6 +27,9 @@ namespace DungeonBlade.Player
         [Tooltip("Local-space offset from target. Auto-filled at Start if captureOffsetOnStart is true.")]
         [SerializeField] Vector3 localOffset = new Vector3(0.4f, 0.4f, -3f);
 
+        [Tooltip("Optional PlayerMovement reference. When set, the camera snaps directly to target during dash/roll/dodge bursts so the camera doesn't trail the player mid-burst. Auto-found on Start from target's root.")]
+        [SerializeField] PlayerMovement playerMovement;
+
         Vector3 _yVelocity;
         Vector3 _xzVelocity;
         bool _initialized;
@@ -51,6 +54,10 @@ namespace DungeonBlade.Player
             // sub-frame movement of the player root won't propagate as shake.
             // Worldspace pose is preserved.
             transform.SetParent(null, true);
+            if (playerMovement == null)
+            {
+                playerMovement = target.GetComponentInParent<PlayerMovement>();
+            }
             _initialized = true;
         }
 
@@ -59,6 +66,20 @@ namespace DungeonBlade.Player
             if (!_initialized || target == null) return;
 
             Vector3 desired = target.TransformPoint(localOffset);
+
+            // Burst mode: during dash/roll/dodge the player moves 3-6 units in
+            // 180-350ms. SmoothDamp would trail visibly, so snap directly to
+            // the rig and reset the damping velocities so the post-burst frame
+            // doesn't overshoot.
+            if (playerMovement != null && playerMovement.IsDashing)
+            {
+                transform.position = desired;
+                _yVelocity = Vector3.zero;
+                _xzVelocity = Vector3.zero;
+                transform.rotation = target.rotation;
+                return;
+            }
+
             Vector3 current = transform.position;
 
             // Smooth Y separately from XZ so vertical jumps don't bleed into

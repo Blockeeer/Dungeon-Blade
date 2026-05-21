@@ -33,7 +33,8 @@ namespace DungeonBlade.Player
         static readonly int HashBigJump     = Animator.StringToHash("BigJump");
         static readonly int HashRoll        = Animator.StringToHash("Roll");
         static readonly int HashDodge       = Animator.StringToHash("Dodge");
-        static readonly int HashDash        = Animator.StringToHash("Dash");
+        // Dash trigger intentionally not declared — sideways dash is
+        // physics-only, no animation fired (see OnDashStarted).
         static readonly int HashSlide       = Animator.StringToHash("Slide");
         static readonly int HashTired       = Animator.StringToHash("Tired");
         static readonly int HashAttack      = Animator.StringToHash("Attack");
@@ -184,12 +185,16 @@ namespace DungeonBlade.Player
         {
             // Default every fresh jump to "small" — HighJumpStarted will flip
             // BigJump back to true on the second-tap path. The Land transitions
-            // gate on BigJump to pick Landing vs Hard Landing.
+            // gate on BigJump to pick Locomotion vs Hard Landing.
             _animator.SetBool(HashBigJump, false);
             _animator.SetTrigger(HashJump);
         }
         void OnHighJumpStarted() => _animator.SetBool(HashBigJump, true);
-        void OnDashStarted()  => _animator.SetTrigger(HashDash);
+        // Intentionally NOT firing HashDash for sideways double-tap dashes —
+        // the physics burst is enough; the locomotion blend tree keeps showing
+        // whatever the player was doing (idle / strafe), which reads cleaner
+        // than the Standing Dive Forward clip used to play.
+        void OnDashStarted()  { /* no-op: dash is physics-only, no anim */ }
 
         void OnDodgeStarted()
         {

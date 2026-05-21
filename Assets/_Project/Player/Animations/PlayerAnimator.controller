@@ -98,8 +98,8 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.3
-  m_TransitionOffset: 0
+  m_TransitionDuration: 0.03
+  m_TransitionOffset: 0.15
   m_ExitTime: 0.9
   m_HasExitTime: 0
   m_HasFixedDuration: 1
@@ -451,8 +451,8 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.12
-  m_TransitionOffset: 0
+  m_TransitionDuration: 0.03
+  m_TransitionOffset: 0.1
   m_ExitTime: 0.9
   m_HasExitTime: 0
   m_HasFixedDuration: 1
@@ -1207,8 +1207,8 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.12
-  m_TransitionOffset: 0
+  m_TransitionDuration: 0.03
+  m_TransitionOffset: 0.1
   m_ExitTime: 0.9
   m_HasExitTime: 0
   m_HasFixedDuration: 1
@@ -1348,7 +1348,7 @@ AnimatorStateMachine:
     m_Position: {x: 550, y: -10, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 5265439788103396058}
-    m_Position: {x: 550, y: 180, z: 0}
+    m_Position: {x: 310, y: 300, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 7133102803614542044}
     m_Position: {x: 820, y: 10, z: 0}
@@ -1363,7 +1363,7 @@ AnimatorStateMachine:
     m_Position: {x: 850, y: 220, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -5336390326331210015}
-    m_Position: {x: 850, y: 300, z: 0}
+    m_Position: {x: 1000, y: 340, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 4347272615327094667}
     m_Position: {x: 1100, y: 140, z: 0}
@@ -1866,7 +1866,7 @@ AnimatorState:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Roll
-  m_Speed: 1.4
+  m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 2709987299651730626}

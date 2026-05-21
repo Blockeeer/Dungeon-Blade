@@ -32,11 +32,11 @@ Before placing the model in the scene, confirm Unity treats it as a Humanoid rig
 3. Inspector → **Rig** tab.
 4. Confirm:
 
-   | Field | Value |
-   |---|---|
-   | Animation Type | `Humanoid` |
-   | Avatar Definition | `Create From This Model` |
-   | Skin Weights | `Standard (4 Bones)` (default) |
+   | Field             | Value                          |
+   | ----------------- | ------------------------------ |
+   | Animation Type    | `Humanoid`                     |
+   | Avatar Definition | `Create From This Model`       |
+   | Skin Weights      | `Standard (4 Bones)` (default) |
 
 5. If anything is wrong, fix it and click **Apply** (bottom of Inspector).
 
@@ -95,18 +95,17 @@ When you drop an FBX, Unity uses its native transform. Often this is correct, bu
 1. Click `Varion` (the child you just added).
 2. Inspector → **Transform**:
 
-   | Field | Initial Value |
-   |---|---|
-   | Position | `(0, 0, 0)` |
-   | Rotation | `(0, 0, 0)` |
-   | Scale | `(1, 1, 1)` |
+   | Field    | Initial Value |
+   | -------- | ------------- |
+   | Position | `(0, 0, 0)`   |
+   | Rotation | `(0, 0, 0)`   |
+   | Scale    | `(1, 1, 1)`   |
 
 ### 3b — Verify height matches the CharacterController
 
 1. Click `Player` (root).
 2. Inspector → **Character Controller** component → note **Height** (typically `2`) and **Center** Y (typically `0` to `1`).
 3. Click `Varion` (child) and look at the Scene view.
-
    - **Looks right (human-sized, standing where capsule was)** → ✅ continue.
    - **Slightly too tall / short** → adjust the Varion CHILD's instance Scale: try `(0.9, 0.9, 0.9)` or `(1.1, 1.1, 1.1)` until height matches the capsule. Do NOT touch FBX Scale Factor.
    - **Way too big (multiple times taller than the map)** → you likely changed Scale Factor in the FBX import. Revert it (see §3c).
@@ -125,6 +124,7 @@ If you did set Scale Factor higher and Varion is now huge:
 To resize at the scene level instead, use the **Varion child's** Transform → Scale field in the scene (not the FBX import setting). Example: scale `(0.8, 0.8, 0.8)` shrinks the in-scene Varion to 80% without touching the source FBX.
 
 **Why scale at instance level, not FBX:**
+
 - FBX Scale Factor changes EVERY instance of the model across all scenes — risky.
 - Instance Scale on the Varion child only affects this one scene placement — safe, reversible, per-scene-tunable.
 
@@ -173,15 +173,15 @@ Once Varion is placed and looks right:
 
 ## Common issues
 
-| Symptom | Fix |
-|---|---|
-| Drop into Hierarchy didn't make Varion a child of Player | Re-drag. Drop precisely onto the Player GameObject's name, not below it. Click Player first to highlight, then drag the FBX onto the highlighted row. |
-| Varion appears outside the level | Position not at (0,0,0). Reset transform. |
-| Two Varions visible | You forgot to disable the placeholder. Click the old visual → uncheck in Inspector. |
-| Varion has no skeleton in Hierarchy (just one GameObject) | The FBX wasn't rigged. Check Rig tab is set to Humanoid + Avatar = Create From This Model. |
-| Animator added but Varion T-poses on Play | Avatar field empty on Animator, OR Apply Root Motion is ON — see ANIMATION_SETUP.md §3 + §9b. |
-| Bones look distorted at runtime | Mixamo animations don't match the model's bone proportions perfectly. Some clipping is normal; major distortion = re-import the FBX from Mixamo with the **Without Skin** option. |
-| Camera goes inside Varion's head | CameraRig is at the wrong height. Move CameraRig up (Position Y +1.5 or so). |
+| Symptom                                                   | Fix                                                                                                                                                                               |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Drop into Hierarchy didn't make Varion a child of Player  | Re-drag. Drop precisely onto the Player GameObject's name, not below it. Click Player first to highlight, then drag the FBX onto the highlighted row.                             |
+| Varion appears outside the level                          | Position not at (0,0,0). Reset transform.                                                                                                                                         |
+| Two Varions visible                                       | You forgot to disable the placeholder. Click the old visual → uncheck in Inspector.                                                                                               |
+| Varion has no skeleton in Hierarchy (just one GameObject) | The FBX wasn't rigged. Check Rig tab is set to Humanoid + Avatar = Create From This Model.                                                                                        |
+| Animator added but Varion T-poses on Play                 | Avatar field empty on Animator, OR Apply Root Motion is ON — see ANIMATION_SETUP.md §3 + §9b.                                                                                     |
+| Bones look distorted at runtime                           | Mixamo animations don't match the model's bone proportions perfectly. Some clipping is normal; major distortion = re-import the FBX from Mixamo with the **Without Skin** option. |
+| Camera goes inside Varion's head                          | CameraRig is at the wrong height. Move CameraRig up (Position Y +1.5 or so).                                                                                                      |
 
 ---
 
@@ -191,7 +191,7 @@ Once Varion is placed and looks right:
 - [ ] §2c — old placeholder disabled/deleted
 - [ ] §2d — Varion dragged onto Player in Hierarchy
 - [ ] §3a — Varion's local Transform reset to (0, 0, 0) / (0, 0, 0) / (1, 1, 1)
-- [ ] §3b/c — Varion's height looks right; if tiny, set Scale Factor 100 in FBX import
+- [ ] §3b/c — Varion's height looks right; if size is off, adjust the Varion CHILD's instance Scale (e.g. 0.9 or 1.1) — do NOT change FBX Scale Factor
 - [ ] §3d — Varion's feet on the floor (adjust Position Y if needed)
 - [ ] Save scene (Ctrl+S)
 - [ ] §6 — proceed to ANIMATION_SETUP.md §9 to wire Animator + Bridge

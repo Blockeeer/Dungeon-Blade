@@ -98,6 +98,11 @@ namespace DungeonBlade.Player
         float _nextDodgeTime;
         Vector3 _dashDirection;
         float _activeBurstSpeed;
+        // Y snapshot taken when a dash/dodge/roll starts on the ground — used
+        // to clamp the character back to this Y every frame during the burst
+        // so animation root-Y drift can't sink the player into the floor.
+        float _burstGroundY;
+        bool _burstGroundYValid;
 
         Vector2 _lastMoveInput;
         float _lastLeftTapTime = -999f;
@@ -403,6 +408,8 @@ namespace DungeonBlade.Player
             _dashEndTime = Time.time + dodgeDuration;
             _nextDodgeTime = Time.time + dodgeCooldown;
             _hasPendingDash = false;
+            _burstGroundY = transform.position.y;
+            _burstGroundYValid = _isGrounded;
             DodgeStarted?.Invoke();
             return true;
         }
@@ -420,6 +427,8 @@ namespace DungeonBlade.Player
             _activeBurstSpeed = dashSpeed;
             _dashEndTime = Time.time + dashDuration;
             _nextDashTime = Time.time + dashCooldown;
+            _burstGroundY = transform.position.y;
+            _burstGroundYValid = _isGrounded;
             DashStarted?.Invoke();
             return true;
         }
@@ -512,6 +521,16 @@ namespace DungeonBlade.Player
                 _velocity.x = dashStep.x;
                 _velocity.z = dashStep.z;
                 _velocity.y = 0f;
+                // Snap Y back to the burst's start ground level if anything
+                // (animation root-motion-Y, CharacterController step offset)
+                // has nudged the character downward. Only applies when the
+                // burst started grounded — air bursts keep their arc.
+                if (_burstGroundYValid && transform.position.y < _burstGroundY)
+                {
+                    Vector3 p = transform.position;
+                    p.y = _burstGroundY;
+                    transform.position = p;
+                }
                 return;
             }
 
