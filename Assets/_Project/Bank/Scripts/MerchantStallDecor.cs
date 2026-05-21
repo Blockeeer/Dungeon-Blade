@@ -1,5 +1,7 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace DungeonBlade.Bank
 {
@@ -18,6 +20,21 @@ namespace DungeonBlade.Bank
         [SerializeField] string overrideSignText = "";
         [Tooltip("Hide the host GameObject's own MeshRenderer so the stall replaces the capsule.")]
         [SerializeField] bool hideHostMesh = true;
+
+        [Header("Merchant model (optional)")]
+        [Tooltip("Drag in a character FBX or prefab. If set, the cube humanoid is skipped and your model is instantiated as the merchant.")]
+        [SerializeField] GameObject merchantModel;
+        [Tooltip("Local position of the merchant model relative to the stall base. Default centers them behind the counter.")]
+        [SerializeField] Vector3 merchantLocalPosition = new Vector3(0f, 0f, 0.25f);
+        [Tooltip("Local Euler rotation. Mixamo characters face +Z natively, so Y=180 turns them to face the player (-Z).")]
+        [SerializeField] Vector3 merchantLocalRotation = new Vector3(0f, 180f, 0f);
+        [Tooltip("Uniform scale applied to the spawned model. 1 = native FBX size. Bump up if the model imports tiny (Mixamo files often need 1.5-2x for human size).")]
+        [SerializeField] float merchantScale = 1.7f;
+        [Tooltip("Optional idle animation clip. Drag in a Mixamo idle clip (e.g. Breathing Idle.fbx) so the merchant breathes instead of T-posing. The clip is played via PlayableGraph — no Animator Controller asset needed and loops automatically.")]
+        [SerializeField] AnimationClip merchantIdleClip;
+        [Tooltip("Tint applied to the merchant model's materials. White = use the FBX's native color. Use this to color a plain gray mannequin into a unique merchant.")]
+        [ColorUsage(false, false)]
+        [SerializeField] Color merchantTint = Color.white;
 
         [Header("Placement")]
         [Tooltip("If true, raycasts straight down at Awake to find the floor and drops the stall so its base sits on it.")]
@@ -140,13 +157,16 @@ namespace DungeonBlade.Bank
             BuildLantern(root, new Vector3(-1.45f, 2.10f, -0.10f));
             BuildLantern(root, new Vector3( 1.45f, 2.10f, -0.10f));
 
-            // Merchant — stylized bank guard (capsule humanoid with cape + cap)
-            BuildMerchantFigure(root, new Vector3(0f, 0f, 0.15f),
-                bodyColor: new Color(0.22f, 0.16f, 0.10f),       // brown leather coat
-                headColor: new Color(0.82f, 0.66f, 0.54f),
-                accentColor: new Color(0.55f, 0.22f, 0.08f),     // rust sash / cape
-                shoulderMat: ironDark,
-                hooded: false);
+            // Merchant — assigned character model if any, else stylized cube bank guard.
+            if (!TrySpawnMerchantModel(root))
+            {
+                BuildMerchantFigure(root, new Vector3(0f, 0f, 0.15f),
+                    bodyColor: new Color(0.22f, 0.16f, 0.10f),       // brown leather coat
+                    headColor: new Color(0.82f, 0.66f, 0.54f),
+                    accentColor: new Color(0.55f, 0.22f, 0.08f),     // rust sash / cape
+                    shoulderMat: ironDark,
+                    hooded: false);
+            }
 
             // Sign — weathered plank with iron brackets
             BuildIronSign(root,
@@ -221,13 +241,16 @@ namespace DungeonBlade.Bank
             // Hanging oil lantern from the peak
             BuildLantern(root, new Vector3(0f, 2.80f, -0.10f));
 
-            // Merchant — hooded mercenary (capsule humanoid with hood + scarf)
-            BuildMerchantFigure(root, new Vector3(0f, 0f, 0.15f),
-                bodyColor: new Color(0.16f, 0.14f, 0.13f),      // dark coat
-                headColor: new Color(0.82f, 0.68f, 0.58f),
-                accentColor: new Color(0.55f, 0.18f, 0.10f),    // rust scarf
-                shoulderMat: ironDark,
-                hooded: true);
+            // Merchant — assigned character model if any, else stylized hooded cube mercenary.
+            if (!TrySpawnMerchantModel(root))
+            {
+                BuildMerchantFigure(root, new Vector3(0f, 0f, 0.15f),
+                    bodyColor: new Color(0.16f, 0.14f, 0.13f),      // dark coat
+                    headColor: new Color(0.82f, 0.68f, 0.58f),
+                    accentColor: new Color(0.55f, 0.18f, 0.10f),    // rust scarf
+                    shoulderMat: ironDark,
+                    hooded: true);
+            }
 
             // Sign — weathered plank with iron brackets
             BuildIronSign(root,
@@ -235,6 +258,83 @@ namespace DungeonBlade.Bank
                 new Vector3(0f, 3.60f, -0.20f),
                 new Color(0.92f, 0.80f, 0.45f),
                 weatheredWood, ironDark, ironRust);
+        }
+
+        PlayableGraph _idleGraph;
+        AnimationClipPlayable _idleClipPlayable;
+
+        // Instantiates the assigned character model as the merchant if one is set.
+        // Strips colliders, applies tint color, and optionally drives a Humanoid idle clip
+        // via PlayableGraph so the model breathes (looped) instead of standing in T-pose.
+        bool TrySpawnMerchantModel(Transform root)
+        {
+            if (merchantModel == null) return false;
+            var instance = Instantiate(merchantModel, root);
+            instance.name = "Merchant_Model";
+            instance.transform.localPosition = merchantLocalPosition;
+            instance.transform.localRotation = Quaternion.Euler(merchantLocalRotation);
+            instance.transform.localScale = Vector3.one * Mathf.Max(0.01f, merchantScale);
+
+            foreach (var c in instance.GetComponentsInChildren<Collider>())
+            {
+                c.enabled = false;
+            }
+
+            // Tint all materials on the spawned model (skins, body parts, accessories).
+            // Uses material instances so we don't bleed color back into the shared asset.
+            if (merchantTint != Color.white)
+            {
+                foreach (var r in instance.GetComponentsInChildren<Renderer>())
+                {
+                    var mats = r.materials; // creates instances
+                    for (int i = 0; i < mats.Length; i++)
+                    {
+                        if (mats[i] == null) continue;
+                        if (mats[i].HasProperty("_BaseColor")) mats[i].SetColor("_BaseColor", merchantTint);
+                        else if (mats[i].HasProperty("_Color")) mats[i].SetColor("_Color", merchantTint);
+                        mats[i].color = merchantTint;
+                    }
+                    r.materials = mats;
+                }
+            }
+
+            // Drive idle animation via PlayableGraph (works with Humanoid Mixamo clips,
+            // no AnimatorController asset required). Looping handled in Update.
+            if (merchantIdleClip != null)
+            {
+                var animator = instance.GetComponentInChildren<Animator>();
+                if (animator == null) animator = instance.AddComponent<Animator>();
+                animator.applyRootMotion = false;
+
+                _idleGraph = PlayableGraph.Create($"MerchantIdle_{instance.GetInstanceID()}");
+                _idleGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+                var output = AnimationPlayableOutput.Create(_idleGraph, "Animation", animator);
+                _idleClipPlayable = AnimationClipPlayable.Create(_idleGraph, merchantIdleClip);
+                _idleClipPlayable.SetApplyFootIK(false);
+                output.SetSourcePlayable(_idleClipPlayable);
+                _idleGraph.Play();
+            }
+
+            return true;
+        }
+
+        void Update()
+        {
+            // Manually wrap the clip time to make the idle loop (AnimationClipPlayable
+            // doesn't auto-loop, it plays once and stops at the end).
+            if (_idleClipPlayable.IsValid() && merchantIdleClip != null && merchantIdleClip.length > 0f)
+            {
+                double t = _idleClipPlayable.GetTime();
+                if (t >= merchantIdleClip.length)
+                {
+                    _idleClipPlayable.SetTime(t % merchantIdleClip.length);
+                }
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (_idleGraph.IsValid()) _idleGraph.Destroy();
         }
 
         // ---------- shared builders ----------

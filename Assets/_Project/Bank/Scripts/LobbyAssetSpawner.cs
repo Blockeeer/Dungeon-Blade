@@ -123,7 +123,17 @@ namespace DungeonBlade.Bank
                 var prefab = prefabs[rng.Next(prefabs.Length)];
                 if (prefab == null) continue;
 
-                var go = Instantiate(prefab, group.transform);
+                GameObject go;
+                try
+                {
+                    go = Instantiate(prefab, group.transform);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[LobbyAssetSpawner] Failed to instantiate '{prefab.name}' in group '{groupName}' — skipping this prefab. ({e.GetType().Name})");
+                    continue;
+                }
+                if (go == null) continue;
                 go.transform.localPosition = new Vector3(x, yOffset, z);
                 go.transform.localRotation = Quaternion.Euler(0f, (float)(rng.NextDouble() * 360.0), 0f);
                 float s = Mathf.Lerp(scaleRange.x, scaleRange.y, (float)rng.NextDouble());
@@ -152,7 +162,17 @@ namespace DungeonBlade.Bank
                 var prefab = mountainPrefabs[rng.Next(mountainPrefabs.Length)];
                 if (prefab == null) continue;
 
-                var go = Instantiate(prefab, group.transform);
+                GameObject go;
+                try
+                {
+                    go = Instantiate(prefab, group.transform);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[LobbyAssetSpawner] Failed to instantiate mountain '{prefab.name}' — skipping. ({e.GetType().Name})");
+                    continue;
+                }
+                if (go == null) continue;
                 go.transform.localPosition = new Vector3(x, 0f, z);
 
                 // Yaw: face inward toward (0, 0, 0) or random.
