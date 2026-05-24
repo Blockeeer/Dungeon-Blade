@@ -1,17 +1,17 @@
-# Enemy Models Setup — Mixamo Pipeline
+# Enemy Models Setup
 
-Replace the primitive placeholder visuals on `Skeleton_Soldier`, `Skeleton_Archer`, and `Armored_Knight` prefabs with rigged Mixamo Humanoid models.
+Replace the primitive placeholder visuals on `Skeleton_Soldier`, `Skeleton_Archer`, and `Armored_Knight` prefabs with the rigged Humanoid FBXes already in the project.
 
-**Time:** ~30-40 min for all 3 (10 min per enemy + Mixamo browsing).
+**Time:** ~15-20 min for all 3 (≈5 min per enemy).
 **Risk:** low — model is a visual child of the prefab, code (`EnemyBase.cs` etc.) is untouched.
 
 ---
 
-## §0 — Why Mixamo for enemies
+## §0 — Why these FBXes work
 
-- Same Humanoid rig as the player → animations interchangeable
-- All 3 enemies + future enemies can share one Animator Controller if you reuse the rig
-- Free with Adobe account; instant download as FBX
+- Already imported with Humanoid rig — animations retarget cleanly
+- All 3 enemies + future enemies can share one Animator Controller (same rig)
+- Already in your project; no external download needed
 
 ---
 
@@ -31,99 +31,73 @@ You'll add the rigged FBX **as a child of this root**, NOT replace the root.
 
 ---
 
-## §2 — Recommended Mixamo skins per enemy
+## §2 — Your existing enemy FBXes (no Mixamo download needed)
 
-Mixamo lets you pick a "Character" (skin) before downloading. These skins are what your enemy will look like:
+**You already have the enemy models imported.** Skip the Mixamo step. Use the FBXes already in your project:
 
-| Enemy script | Mixamo skin | Why |
+| Enemy script | FBX file | Location |
 |---|---|---|
-| `SkeletonSoldier` | **Mremireh O'Desbiens** | Looks like a tribal/skeleton warrior with bone-pale skin tone; instantly reads as undead at distance |
-| `SkeletonArcher` | **Mremireh O'Desbiens** (same as Soldier) | Reuse skin → free visual consistency; differentiate via bow weapon prop |
-| `ArmoredKnight` | **Paladin Nevin** or **Knight** | Full plate armor; reads as armored melee enemy |
+| `SkeletonSoldier` | `Skeleton Soldier-T-Pose.fbx` | `Assets/_Project/Enemies/Skeleton/Models/` |
+| `SkeletonArcher` | `Skeleton-Archer-T-Pose.fbx` | `Assets/_Project/Enemies/Archer/Models/` |
+| `ArmoredKnight` | `Armored-Knight-T-Pose.fbx` | `Assets/_Project/Enemies/Knight/Models/` |
 
-**Alternative skeleton skins** (if you want a more cartoony skeleton look):
-- "Big Vegas" → bandaged mummy vibe
-- "Y Bot" → robotic, futuristic — not lore-appropriate for Dungeon Blade
-- "Skeletonzombie T Avelange" → if Mixamo's catalog has it, this is the most "skeleton" looking option
+These are already:
+- ✅ Rig = Humanoid (`animationType: 3`)
+- ✅ Avatar Definition = Create From This Model (`avatarSetup: 1`)
+- ✅ Textures auto-extracted to `.fbm` cache folders
+
+So §3 (Mixamo download) and §4 (import settings) below are **skippable** unless you want to verify or re-extract materials. Jump to **§5** to attach the FBX to the prefab.
 
 ---
 
-## §3 — Download from Mixamo
+## §3 — Mixamo download (skip — only here for reference)
 
-For each unique skin (so once for skeleton, once for knight):
+Only do this if you want to *replace* an existing enemy model with a different look. Otherwise skip to §5.
 
 1. Go to https://www.mixamo.com (Adobe account, free)
-2. **Characters** tab → pick the skin (e.g. Mremireh O'Desbiens)
+2. **Characters** tab → pick the skin
 3. Click **Download** (top-right)
 4. Settings:
    - **Format:** FBX Binary (.fbx)
-   - **Pose:** **T-Pose** (CRITICAL — gives a clean rig with no clip baked in)
+   - **Pose:** **T-Pose**
    - **Frames per Second:** 30
-5. Click Download → saves a file like `Mremireh_O_Desbiens.fbx`
-
-Repeat for each skin.
 
 ---
 
-## §4 — Import into Unity
+## §4 — Import settings (skip — already done)
 
-For each downloaded FBX:
+Only revisit if your FBX rig isn't recognized as Humanoid. For verification only:
 
-### 4a — Place the file
+### 4a — Verify Rig
 
-| Enemy | Target folder |
-|---|---|
-| Skeleton Soldier + Archer | `Assets/_Project/Enemies/Skeleton/Models/` (create if missing) |
-| Armored Knight | `Assets/_Project/Enemies/Knight/Models/` (create if missing) |
-
-Drag the FBX from your downloads folder into the Project window at the right path.
-
-### 4b — Configure Rig
-
-1. Click the FBX → Inspector → **Rig** tab.
-2. Set:
+1. Click your enemy FBX (e.g. `Skeleton Soldier-T-Pose.fbx`) → Inspector → **Rig** tab.
+2. Confirm:
 
    | Field | Value |
    |---|---|
-   | **Animation Type** | `Humanoid` |
-   | **Avatar Definition** | `Create From This Model` |
+   | **Animation Type** | `Humanoid` ✅ |
+   | **Avatar Definition** | `Create From This Model` ✅ |
    | **Skin Weights** | `Standard (4 Bones)` |
 
-3. Click **Apply** (bottom of Inspector).
-4. After Apply finishes, a sub-asset Avatar appears under the FBX in the Project window (e.g. `MremirenhAvatar`).
-5. If Rig tab shows red error "missing required bones," the FBX is broken — re-download from Mixamo.
+3. If anything's wrong, change it and Apply. Your project's enemies are already correct.
 
-### 4c — Configure Model tab
+### 4b — Verify Model
 
 1. Inspector → **Model** tab.
-2. Settings:
+2. Confirm:
 
    | Field | Value |
    |---|---|
-   | **Scale Factor** | `1` (DO NOT change to 100 — Mixamo characters are pre-scaled for Unity at 1) |
-   | **Mesh Compression** | `Off` |
-   | **Read/Write Enabled** | ❌ unchecked |
-   | **Optimize Game Objects** | ❌ unchecked (need bone GameObjects for IK / weapon parenting later) |
+   | **Scale Factor** | `1` (DO NOT change to 100) |
+   | **Read/Write Enabled** | ❌ |
+   | **Optimize Game Objects** | ❌ |
 
-3. Apply.
+### 4c — Materials (only if textures look broken)
 
-### 4d — Configure Materials tab
-
-1. Inspector → **Materials** tab.
-2. Settings:
-
-   | Field | Value |
-   |---|---|
-   | **Material Creation Mode** | `Standard (Legacy)` or `Import via MaterialDescription` (whichever extracts materials cleanly) |
-   | **Location** | `Use External Materials (Legacy)` |
-   | **Naming** | `By Base Texture Name` |
-   | **Search** | `Recursive-Up` |
-
-3. Click **Extract Materials...** → choose `Assets/_Project/Enemies/<type>/Models/Materials/` (create subfolder).
-4. Click **Extract Textures...** → same Materials folder.
-5. Apply.
-
-This extracts the embedded textures so you can swap them later (e.g. tint the Skeleton white/grey, give the Knight a darker armor).
+If the enemy appears purple/missing-texture in the scene:
+1. Inspector → **Materials** tab → **Extract Textures...** → `Assets/_Project/Enemies/<type>/Models/Materials/`
+2. **Extract Materials...** → same folder
+3. Apply
 
 ---
 
@@ -137,14 +111,37 @@ For each enemy:
 
 ### 5b — Find/remove the placeholder visual
 
+The placeholder can live in one of two places. Check both:
+
+**Case 1 — Placeholder is a child GameObject** (e.g. `Capsule`, `Cube`, `Visual`):
+
 1. Hierarchy (Prefab Edit) → expand the root.
 2. Look for a child named like `Capsule`, `Cube`, `Visual`, or similar primitive.
-3. If found: right-click → **Delete** (placeholder is no longer needed).
-4. If no visible primitive — the root GameObject's MeshFilter+MeshRenderer might BE the placeholder; in that case, click the root, Inspector → right-click on MeshFilter → Remove Component, same for MeshRenderer.
+3. If found: right-click → **Delete**.
+
+**Case 2 — Placeholder is on the root GameObject itself** (MeshFilter + MeshRenderer with a capsule mesh):
+
+1. Click the prefab **root** in Hierarchy.
+2. Inspector → find **MeshFilter** component → right-click its header → **Remove Component**.
+3. Inspector → find **MeshRenderer** component → right-click its header → **Remove Component**.
+
+**⚠️ DO NOT touch these components on the root:**
+
+| Component | Why keep it |
+|---|---|
+| **CapsuleCollider** | Required by EnemyBase script — physics hitbox + NavMesh footprint. Removing it breaks damage detection. |
+| **NavMeshAgent** | Drives enemy movement; removing it kills the AI. |
+| **SkeletonSoldier / SkeletonArcher / ArmoredKnight script** | The enemy's brain — keep it. |
+| **Transform** | Can't remove this — it's required. |
+
+**Visual check:** before dragging the FBX, the Scene view should show only the **green capsule wireframe** (that's the CapsuleCollider), NOT a solid white/grey capsule (that was the placeholder mesh, now removed).
 
 ### 5c — Drag the FBX into the prefab
 
-1. Project window → click the imported FBX (e.g. `Mremireh_O_Desbiens.fbx`).
+1. Project window → click the FBX for the enemy you're editing:
+   - Skeleton_Soldier → `Assets/_Project/Enemies/Skeleton/Models/Skeleton Soldier-T-Pose.fbx`
+   - Skeleton_Archer → `Assets/_Project/Enemies/Archer/Models/Skeleton-Archer-T-Pose.fbx`
+   - Armored_Knight → `Assets/_Project/Enemies/Knight/Models/Armored-Knight-T-Pose.fbx`
 2. Drag onto the prefab root in the Hierarchy → drops as a child.
 3. Click the new child → Inspector → Transform:
    - Position: `(0, 0, 0)` — should already be at the root's local origin
@@ -205,7 +202,7 @@ For each prefab:
    | Field | Value |
    |---|---|
    | **Controller** | drag `Assets/_Project/Player/Animations/PlayerAnimator.controller` (TEMP — replace with enemy controller later) |
-   | **Avatar** | drag the Avatar sub-asset from the enemy's FBX (e.g. `MremiremnAvatar`) |
+   | **Avatar** | drag the Avatar sub-asset from the enemy's FBX (expand the FBX in the Project window — the Avatar sub-asset is named `<FbxName>Avatar`, e.g. `Skeleton Soldier-T-PoseAvatar`) |
    | **Apply Root Motion** | ❌ unchecked (NavMeshAgent drives motion) |
 
 4. Save (← exit Prefab Edit).
@@ -216,7 +213,7 @@ For each prefab:
 
 ## §7 — Differentiate Skeleton_Soldier vs Skeleton_Archer
 
-Both use the same Mremireh skin. To make them visually distinct:
+Your project already has two separate FBXes (`Skeleton Soldier-T-Pose` and `Skeleton-Archer-T-Pose`), so they may already look different. If they happen to use the same mesh, here are options to make them visually distinct:
 
 ### Option A — Material tint
 
@@ -313,9 +310,8 @@ That's a separate ~1hr session. Mention "ready for boss model" when these 3 enem
 
 ## Recap checklist
 
-- [ ] §3 — Mremireh O'Desbiens FBX downloaded
-- [ ] §3 — Paladin Nevin (or knight skin) FBX downloaded
-- [ ] §4 — Both FBXes imported, Rig=Humanoid, Materials extracted
+- [x] §2 — All 3 enemy FBXes already in project (Skeleton Soldier, Skeleton Archer, Armored Knight)
+- [x] §4 — FBXes already Humanoid-rigged with Create From This Model
 - [ ] §5 — Skeleton_Soldier.prefab visual replaced
 - [ ] §5 — Skeleton_Archer.prefab visual replaced
 - [ ] §5 — Armored_Knight.prefab visual replaced
@@ -330,7 +326,7 @@ When done, tell me "enemy models done" and I'll write the enemy animator setup a
 
 ## Reference
 
-- [Mixamo](https://www.mixamo.com) — character + animation source
+- [Mixamo](https://www.mixamo.com) — animation source (used for future Mixamo animation clips retargeting onto these enemy rigs)
 - [ANIMATION_SETUP.md](ANIMATION_SETUP.md) — animation principles (apply same Bake Pose policy when wiring enemy animations later)
 - [PLACE_CHARACTER_MODEL.md](PLACE_CHARACTER_MODEL.md) — same pattern, applied to the player
 - [DungeonBlade GDD v1.md](DungeonBlade%20GDD%20v1.md) §3.1 — enemy roster
