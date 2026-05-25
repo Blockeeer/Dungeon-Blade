@@ -954,8 +954,8 @@ GameObject:
   - component: {fileID: 2158753945675706799}
   - component: {fileID: 986504848830917625}
   - component: {fileID: 6772752587430629569}
-  - component: {fileID: 1330222379543947433}
   - component: {fileID: 909823540727176486}
+  - component: {fileID: -3548354246441248746}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1076,11 +1076,11 @@ MonoBehaviour:
   dashDuration: 0.18
   dashCooldown: 0.6
   dashStaminaCost: 20
+  doubleTapWindow: 0.25
   dodgeSpeed: 16
   dodgeDuration: 0.15
   dodgeCooldown: 0.4
   dodgeStaminaCost: 15
-  doubleTapWindow: 0.25
   slideSpeed: 12
   slideDuration: 0.6
   slideHeight: 1
@@ -1115,6 +1115,7 @@ MonoBehaviour:
   startingWeaponIndex: 0
   comboSystem: {fileID: 0}
   crosshair: {fileID: 0}
+  movement: {fileID: 0}
 --- !u!114 &6772752587430629569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1135,23 +1136,6 @@ MonoBehaviour:
   referenceWalkSpeed: 6
   cameraRig: {fileID: 0}
   bigHitThreshold: 25
---- !u!114 &1330222379543947433
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5417951250458997335}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db0df561cd2d5d74993e8b021f6a58cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  target: {fileID: 9107143495259462929}
-  verticalSmoothTime: 0.06
-  horizontalSmoothTime: 0.02
-  captureOffsetOnStart: 1
-  localOffset: {x: 0.4, y: 0.4, z: -3}
 --- !u!114 &909823540727176486
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1166,6 +1150,46 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hips: {fileID: 5647437622893958282}
   lockY: 0
+--- !u!114 &-3548354246441248746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5417951250458997335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38edf1926d1f07842a2d42ea1c98581d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mappings:
+  - id: kaelen
+    modelPrefab: {fileID: 919132149155446097, guid: 3353a4eb58a6ed74a99e141bafc10ccc,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  - id: lyra
+    modelPrefab: {fileID: 919132149155446097, guid: 643886bd88e26fa4a9e20b16d7487f96,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  - id: wayne
+    modelPrefab: {fileID: 919132149155446097, guid: 42fadf533f0db2c41981da1b5a78ece3,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  - id: mira
+    modelPrefab: {fileID: 919132149155446097, guid: 548096f7c25d19b45b4f5c3396401170,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  - id: varion
+    modelPrefab: {fileID: 919132149155446097, guid: 789f5e8688e7de94dafc35ee2415d657,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  - id: aurelia
+    modelPrefab: {fileID: 919132149155446097, guid: f95f82db684db82458aaed4a7b7106f7,
+      type: 3}
+    avatarOverride: {fileID: 0}
+  fallbackCharacterId: lyra
+  strippedChildPrefixes:
+  - mixamorig
 --- !u!1 &5759260883044328325
 GameObject:
   m_ObjectHideFlags: 0

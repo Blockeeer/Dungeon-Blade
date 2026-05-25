@@ -1237,13 +1237,10 @@ namespace DungeonBlade.Bank
             renderer.renderMode = ParticleSystemRenderMode.Stretch;
             renderer.lengthScale = 12f;
             renderer.velocityScale = 0f;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            // Force the streak to align with the velocity vector (the godRayDirection).
             renderer.alignment = ParticleSystemRenderSpace.Velocity;
 
-            // Reuse the same additive particle material as dust motes / embers.
-            ConfigureParticleRenderer(ps, godRayColor);
+            // Apply additive material WITHOUT resetting renderMode back to Billboard.
+            ConfigureParticleRenderer(ps, godRayColor, isBillboard: false);
         }
 
         void BuildEmberSparks(Transform parent, Vector3 localPos, float emissionRate, float radius, float lifetime, float riseSpeed)
@@ -1309,31 +1306,71 @@ namespace DungeonBlade.Bank
         }
 
         static Material _particleMat;
-        static void ConfigureParticleRenderer(ParticleSystem ps, Color tint)
+        static Texture2D _softParticleTex;
+
+        // Builds a small soft-edged radial gradient texture so billboards fade out smoothly
+        // at the edges instead of rendering as hard squares.
+        static Texture2D GetSoftParticleTexture()
+        {
+            if (_softParticleTex != null) return _softParticleTex;
+            const int size = 64;
+            _softParticleTex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "RuntimeSoftParticle",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var pixels = new Color[size * size];
+            Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+            float maxDist = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), center) / maxDist;
+                    float a = Mathf.Clamp01(1f - d);
+                    a = a * a; // squared for softer falloff
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, a);
+                }
+            }
+            _softParticleTex.SetPixels(pixels);
+            _softParticleTex.Apply();
+            return _softParticleTex;
+        }
+
+        // Build the shared additive particle material exactly once.
+        // Uses Sprites/Default which is cross-pipeline reliable and respects vertex color
+        // (so each ParticleSystem's startColor still tints its own particles).
+        static Material GetParticleMaterial()
+        {
+            if (_particleMat != null) return _particleMat;
+            // Sprites/Default is built into all pipelines, ignores lighting, alpha-blends.
+            var shader = Shader.Find("Sprites/Default");
+            if (shader == null) shader = Shader.Find("UI/Default");
+            if (shader == null) shader = Shader.Find("Unlit/Transparent");
+            _particleMat = new Material(shader) { name = "RuntimeParticleMat" };
+            // Force ADDITIVE blend (SrcAlpha * One). This is what makes overlapping particles
+            // brighten the scene instead of stacking as opaque cards.
+            _particleMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            _particleMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+            _particleMat.SetInt("_ZWrite", 0);
+            _particleMat.renderQueue = 3100;
+            _particleMat.mainTexture = GetSoftParticleTexture();
+            return _particleMat;
+        }
+
+        // isBillboard=false preserves the caller's renderMode (Stretch for god rays, Mesh for custom shapes).
+        static void ConfigureParticleRenderer(ParticleSystem ps, Color tint, bool isBillboard = true)
         {
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            renderer.alignment = ParticleSystemRenderSpace.View;
+            if (isBillboard)
+            {
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                renderer.alignment = ParticleSystemRenderSpace.View;
+            }
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-
-            if (_particleMat == null)
-            {
-                // Try URP particles unlit first, then fallback to built-in particle additive.
-                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
-                if (shader == null) shader = Shader.Find("Mobile/Particles/Additive");
-                if (shader == null) shader = Shader.Find("Standard");
-                _particleMat = new Material(shader) { name = "RuntimeParticleMat" };
-                // URP particle unlit: set surface to Transparent, blend to Additive.
-                if (_particleMat.HasProperty("_Surface")) _particleMat.SetFloat("_Surface", 1f);
-                if (_particleMat.HasProperty("_Blend")) _particleMat.SetFloat("_Blend", 1f); // Additive
-                if (_particleMat.HasProperty("_BaseColor")) _particleMat.SetColor("_BaseColor", Color.white);
-                if (_particleMat.HasProperty("_Color")) _particleMat.SetColor("_Color", Color.white);
-                _particleMat.renderQueue = 3000;
-                _particleMat.mainTexture = Texture2D.whiteTexture;
-            }
-            renderer.material = _particleMat;
+            renderer.sharedMaterial = GetParticleMaterial();
         }
 
         // ------------------------------------------------------------------

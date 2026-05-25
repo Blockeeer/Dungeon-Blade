@@ -28,7 +28,25 @@ namespace DungeonBlade.Bank
         void Awake()
         {
             _interactable = GetComponent<Interactable>();
+            // Only build the trigger child if this component is enabled at scene load —
+            // otherwise a disabled component would still spawn its trigger collider and
+            // the relay would auto-fire even though the user explicitly disabled it.
+            if (enabled) BuildTrigger();
+        }
+
+        void OnEnable()
+        {
+            // If the component is enabled at runtime (after being disabled), make sure
+            // the trigger child exists.
+            if (_interactable == null) _interactable = GetComponent<Interactable>();
             BuildTrigger();
+        }
+
+        void OnDisable()
+        {
+            // Make the trigger collider inert when the component is turned off so the
+            // relay can't fire OnTrigger callbacks.
+            if (_triggerCol != null) _triggerCol.enabled = false;
         }
 
         void OnValidate()
@@ -72,6 +90,7 @@ namespace DungeonBlade.Bank
 
         internal void HandleEnter(Collider other)
         {
+            if (!enabled) return;
             if (!IsPlayer(other)) return;
             _playerInside = true;
             TryFire();
@@ -79,6 +98,7 @@ namespace DungeonBlade.Bank
 
         internal void HandleStay(Collider other)
         {
+            if (!enabled) return;
             if (!IsPlayer(other)) return;
             // Stay covers the case where the player was already inside before this object spawned.
             if (!_playerInside) _playerInside = true;
@@ -87,6 +107,7 @@ namespace DungeonBlade.Bank
 
         internal void HandleExit(Collider other)
         {
+            if (!enabled) return;
             if (!IsPlayer(other)) return;
             _playerInside = false;
             _armed = true;
@@ -131,8 +152,8 @@ namespace DungeonBlade.Bank
     internal class ProximityTriggerRelay : MonoBehaviour
     {
         public ProximityAutoInteract Owner;
-        void OnTriggerEnter(Collider other) { if (Owner != null) Owner.HandleEnter(other); }
-        void OnTriggerStay(Collider other)  { if (Owner != null) Owner.HandleStay(other); }
-        void OnTriggerExit(Collider other)  { if (Owner != null) Owner.HandleExit(other); }
+        void OnTriggerEnter(Collider other) { if (Owner != null && Owner.enabled) Owner.HandleEnter(other); }
+        void OnTriggerStay(Collider other)  { if (Owner != null && Owner.enabled) Owner.HandleStay(other); }
+        void OnTriggerExit(Collider other)  { if (Owner != null && Owner.enabled) Owner.HandleExit(other); }
     }
 }
