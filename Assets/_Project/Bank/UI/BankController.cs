@@ -19,6 +19,11 @@ namespace DungeonBlade.Bank.UI
             Instance = this;
         }
 
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         void Start()
         {
             _input = InputManager.Instance != null ? InputManager.Instance.Actions : new PlayerInputActions();
@@ -29,11 +34,6 @@ namespace DungeonBlade.Bank.UI
         void Update()
         {
             if (_isOpen && _input != null && _input.Pause.WasPressedThisFrame()) Close();
-        }
-
-        void OnDestroy()
-        {
-            if (Instance == this) Instance = null;
         }
 
         public void Open()
